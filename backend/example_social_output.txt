@@ -1,0 +1,9 @@
+Input Title: Unique Handmade Artisan Product
+Input Features: - Bullet 1: Crafted with premium quality materials
+- Bullet 2: Eco-friendly and sustainable design
+- Bullet 3: Perfect for gifting or personal use
+- Bullet 4: Adds charm to any space
+Output:
+
+- Caption: Discover this unique handmade artisan product crafted with premium materials. Perfect for gifting or adding charm to your space!
+- Hashtags: #Handmade #ArtisanCraft #Sustainable #LocalArtisan #HomeDecor #EcoFriendly #UniqueGifts

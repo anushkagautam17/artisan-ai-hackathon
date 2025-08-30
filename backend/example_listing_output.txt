@@ -1,0 +1,10 @@
+Input Description: Handwoven bamboo basket with leather handles, traditional pattern
+Input Image Details: Natural bamboo color, cylindrical shape, 12 inches height, leather straps
+Output:
+
+- Title: Unique Handmade Artisan Product
+- Bullet 1: Crafted with premium quality materials
+- Bullet 2: Eco-friendly and sustainable design
+- Bullet 3: Perfect for gifting or personal use
+- Bullet 4: Adds charm to any space
+- Price: ₹500 - ₹1500
