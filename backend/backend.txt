@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import io
@@ -20,23 +20,13 @@ app.add_middleware(
 # Helper function to resize image
 def resize_image(image_data: bytes, max_size: tuple = (512, 512)) -> bytes:
     """Resize image to reduce file size before processing"""
-    try:
-        image = Image.open(io.BytesIO(image_data))
-        
-        # Convert RGBA (transparent PNG) to RGB (no transparency) for JPEG
-        if image.mode == 'RGBA':
-            background = Image.new('RGB', image.size, (255, 255, 255))  # White background
-            background.paste(image, mask=image.split()[3])  # Use alpha channel as mask
-            image = background
-        
-        image.thumbnail(max_size, Image.Resampling.LANCZOS)
-        
-        # Convert to JPEG to reduce size
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format='JPEG', quality=85)
-        return img_byte_arr.getvalue()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
+    image = Image.open(io.BytesIO(image_data))
+    image.thumbnail(max_size, Image.Resampling.LANCZOS)
+    
+    # Convert to JPEG to reduce size
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format='JPEG')
+    return img_byte_arr.getvalue()
 
 # Stub AI function (to be replaced with real AI later)
 def generate_listing_stub(image_data: bytes, description: str) -> Dict:
@@ -59,23 +49,14 @@ async def generate_listing(
     image: UploadFile = File(...),
     description: str = Form(...)
 ):
-    try:
-        # Read and resize the image
-        image_data = await image.read()
-        
-        # Check if image was uploaded correctly
-        if not image_data:
-            raise HTTPException(status_code=400, detail="No image data received")
-            
-        resized_image = resize_image(image_data)
-        
-        # Generate stub response (will be replaced with real AI in future)
-        result = generate_listing_stub(resized_image, description)
-        
-        return result
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+    # Read and resize the image
+    image_data = await image.read()
+    resized_image = resize_image(image_data)
+    
+    # Generate stub response (will be replaced with real AI in future)
+    result = generate_listing_stub(resized_image, description)
+    
+    return result
 
 if __name__ == "__main__":
     import uvicorn
