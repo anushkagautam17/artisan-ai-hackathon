@@ -2,9 +2,10 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import io
-import json
-from typing import Dict
 import os
+
+# ✅ Import your Week-2 AI service
+from services.ai import generate_listing
 
 app = FastAPI(title="Artisan Marketplace API", version="1.0.0")
 
@@ -22,61 +23,54 @@ def resize_image(image_data: bytes, max_size: tuple = (512, 512)) -> bytes:
     """Resize image to reduce file size before processing"""
     try:
         image = Image.open(io.BytesIO(image_data))
-        
-        # Convert RGBA (transparent PNG) to RGB (no transparency) for JPEG
-        if image.mode == 'RGBA':
-            background = Image.new('RGB', image.size, (255, 255, 255))  # White background
+
+        # Convert RGBA (transparent PNG) to RGB (white background) for JPEG
+        if image.mode == "RGBA":
+            background = Image.new("RGB", image.size, (255, 255, 255))
             background.paste(image, mask=image.split()[3])  # Use alpha channel as mask
             image = background
-        
+
         image.thumbnail(max_size, Image.Resampling.LANCZOS)
-        
-        # Convert to JPEG to reduce size
+
+        # Convert to JPEG for consistency
         img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format='JPEG', quality=85)
+        image.save(img_byte_arr, format="JPEG", quality=85)
         return img_byte_arr.getvalue()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
 
-# Stub AI function (to be replaced with real AI later)
-def generate_listing_stub(image_data: bytes, description: str) -> Dict:
-    """Stub function that returns fake AI results"""
-    return {
-        "listing": "Handcrafted Ceramic Vase - Beautiful artisan piece",
-        "caption": "This beautiful handcrafted ceramic vase features intricate patterns and is made by skilled local artisans using traditional techniques.",
-        "translations": {
-            "hi": "हस्तनिर्मित सिरेमिक फूलदान - सुंदर कारीगर टुकड़ा",
-            "bn": "হস্তনির্মিত সিরামিক ফুলদানি - সুন্দর কারিগর টুকরা"
-        }
-    }
 
 @app.get("/")
 async def root():
     return {"message": "Artisan Marketplace API is running"}
 
+
 @app.post("/generate")
-async def generate_listing(
+async def generate_listing_endpoint(
     image: UploadFile = File(...),
-    description: str = Form(...)
+    description: str = Form(...),
+    target_lang: str = Form("en"),  # default English, can be "hi", "bn", etc.
 ):
     try:
         # Read and resize the image
         image_data = await image.read()
-        
-        # Check if image was uploaded correctly
         if not image_data:
             raise HTTPException(status_code=400, detail="No image data received")
-            
+
         resized_image = resize_image(image_data)
-        
-        # Generate stub response (will be replaced with real AI in future)
-        result = generate_listing_stub(resized_image, description)
-        
+
+        # 🔥 Call the real AI pipeline (Gemini/OpenAI + Translation)
+        result = generate_listing(
+            image_bytes=resized_image, description=description, target_lang=target_lang
+        )
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
