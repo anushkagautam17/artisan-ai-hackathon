@@ -1,17 +1,17 @@
+# app.py
 import streamlit as st
 import requests
 from PIL import Image
 import io
 import base64
 import time
-import json
 
 # Set page configuration
 st.set_page_config(
     page_title="ArtisanAI - Marketplace Assistant",
     page_icon="✨",
     layout="centered",
-    initial_sidebar_state="expanded"  # Changed to expanded for better UX
+    initial_sidebar_state="collapsed"
 )
 
 # Custom CSS for mobile-friendly design and styling
@@ -95,64 +95,6 @@ st.markdown("""
         border-color: #4285F4;
     }
     
-    /* Mobile preview styling */
-    .mobile-preview {
-        width: 350px;
-        border: 2px solid #ddd;
-        border-radius: 20px;
-        padding: 20px;
-        margin: 0 auto;
-        font-family: Arial, sans-serif;
-        background-color: white;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .mobile-header {
-        text-align: center;
-        color: #333;
-        font-size: 16px;
-        margin-bottom: 15px;
-        font-weight: bold;
-    }
-    
-    .mobile-image {
-        width: 100%;
-        border-radius: 10px;
-        margin-bottom: 15px;
-    }
-    
-    .mobile-title {
-        color: #222;
-        margin-bottom: 10px;
-        font-size: 18px;
-        font-weight: bold;
-    }
-    
-    .mobile-description {
-        color: #555;
-        font-size: 14px;
-        line-height: 1.4;
-        margin-bottom: 15px;
-    }
-    
-    .mobile-price {
-        color: #e67e22;
-        font-weight: bold;
-        font-size: 18px;
-        margin-bottom: 15px;
-    }
-    
-    .mobile-button {
-        background-color: #3498db;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        width: 100%;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .main {
@@ -166,46 +108,6 @@ st.markdown("""
         .card {
             padding: 1rem;
         }
-        
-        .mobile-preview {
-            width: 300px;
-            padding: 15px;
-        }
-    }
-    
-    /* Loading animation */
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .loading-spinner {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #4285F4;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-        margin: 20px auto;
-    }
-    
-    /* Error message styling */
-    .error-message {
-        background-color: #ffebee;
-        color: #c62828;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #c62828;
-        margin: 15px 0;
-    }
-    
-    .warning-message {
-        background-color: #fff8e1;
-        color: #f57c00;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #f57c00;
-        margin: 15px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -214,7 +116,7 @@ st.markdown("""
 SAMPLE_PRODUCTS = {
     "Select a sample product": {"image": None, "description": ""},
     "Blue Pottery Vase": {
-        "image": "sample_images/pottery.jpg",
+        "image": "sample_images/pottery.jpg",  # This will be handled via file upload in actual implementation
         "description": "Handmade blue pottery vase with traditional Indian patterns, crafted by skilled artisans."
     },
     "Handloom Saree": {
@@ -255,71 +157,7 @@ MOCK_RESPONSE = {
     }
 }
 
-# Initialize session state for fallback functionality
-def init_session_state():
-    if 'selected_lang' not in st.session_state:
-        st.session_state.selected_lang = 'en'
-    if 'generated_content' not in st.session_state:
-        st.session_state.generated_content = None
-    if 'image_uploaded' not in st.session_state:
-        st.session_state.image_uploaded = False
-    if 'last_successful_result' not in st.session_state:
-        st.session_state.last_successful_result = None
-    if 'backend_status' not in st.session_state:
-        st.session_state.backend_status = "unknown"  # unknown, up, down
-    if 'mobile_preview' not in st.session_state:
-        st.session_state.mobile_preview = False
-
-# Function to check backend status
-def check_backend():
-    try:
-        # Replace with your actual backend health check endpoint
-        response = requests.get("http://localhost:8000/health", timeout=5)
-        if response.status_code == 200:
-            st.session_state.backend_status = "up"
-            return True
-        else:
-            st.session_state.backend_status = "down"
-            return False
-    except requests.exceptions.RequestException:
-        st.session_state.backend_status = "down"
-        return False
-
-# Function to convert image to base64 for HTML display
-def image_to_base64(image):
-    try:
-        if hasattr(image, 'read'):
-            image.seek(0)
-            img_bytes = image.read()
-            return base64.b64encode(img_bytes).decode()
-        else:
-            # If it's already a bytes object
-            return base64.b64encode(image).decode()
-    except Exception as e:
-        st.error(f"Error processing image: {e}")
-        return ""
-
-# Function to call backend API (with fallback handling)
-def call_backend_api(image_data, description, craft_type):
-    # Check backend status first
-    if not check_backend():
-        raise ConnectionError("Backend service is unavailable")
-    
-    # In a real implementation, this would call the actual backend API
-    # For demo purposes, we'll simulate an API call with a delay
-    time.sleep(2)
-    
-    # Simulate occasional backend failures for demonstration
-    if time.time() % 5 < 1:  # Roughly 20% of the time
-        raise ConnectionError("Backend service temporarily unavailable")
-    
-    # Return mock response
-    return MOCK_RESPONSE
-
 def main():
-    # Initialize session state
-    init_session_state()
-    
     # Header section
     st.markdown("""
     <div class="header">
@@ -328,54 +166,23 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Sidebar for settings and info
-    with st.sidebar:
-        st.header("Settings")
-        
-        # Mobile preview toggle
-        st.session_state.mobile_preview = st.checkbox("Enable Mobile Preview", value=False)
-        
-        # Backend status indicator
-        st.divider()
-        st.header("System Status")
-        if st.session_state.backend_status == "up":
-            st.success("✅ Backend: Connected")
-        elif st.session_state.backend_status == "down":
-            st.error("❌ Backend: Disconnected")
-            if st.session_state.last_successful_result:
-                st.info("Showing cached results from last successful generation")
-        else:
-            st.info("🔍 Backend: Checking status...")
-        
-        st.divider()
-        st.header("Info")
-        st.info("""
-        This tool helps local artisans create better product listings using AI.
-        Upload an image and we'll generate a title, description, and suggested price.
-        """)
+    # Initialize session state
+    if 'selected_lang' not in st.session_state:
+        st.session_state.selected_lang = 'en'
+    if 'generated_content' not in st.session_state:
+        st.session_state.generated_content = None
+    if 'image_uploaded' not in st.session_state:
+        st.session_state.image_uploaded = False
     
     # Sample product selector
     sample_option = st.selectbox("Try a sample product", options=list(SAMPLE_PRODUCTS.keys()))
     
-    # File uploader with size warning
+    # File uploader
     uploaded_file = st.file_uploader(
         "Upload product photo", 
         type=["jpg", "jpeg", "png"],
-        help="Upload a clear image of your artisan product (max 5MB recommended)"
+        help="Upload a clear image of your artisan product"
     )
-    
-    # Max image size warning (5MB limit)
-    MAX_IMAGE_SIZE_MB = 5
-    if uploaded_file is not None:
-        # Check file size
-        file_size_mb = uploaded_file.size / (1024 * 1024)
-        if file_size_mb > MAX_IMAGE_SIZE_MB:
-            st.markdown(f"""
-            <div class="warning-message">
-                ⚠️ Image size ({file_size_mb:.1f}MB) exceeds the recommended limit of {MAX_IMAGE_SIZE_MB}MB. 
-                Processing may be slow. Consider resizing your image.
-            </div>
-            """, unsafe_allow_html=True)
     
     # If sample product is selected, update the description
     product_description = ""
@@ -400,15 +207,21 @@ def main():
     # Language selection
     st.write("Select languages for translation:")
     lang_cols = st.columns(5)
-    languages = [("English", "en"), ("Hindi", "hi"), ("Bengali", "bn"), ("Tamil", "ta"), ("Telugu", "te")]
-    
-    for i, (lang_name, lang_code) in enumerate(languages):
-        with lang_cols[i]:
-            if st.button(lang_name, key=lang_code):
-                st.session_state.selected_lang = lang_code
-    
-    # Highlight selected language
-    st.markdown(f"**Selected language:** {[name for name, code in languages if code == st.session_state.selected_lang][0]}")
+    with lang_cols[0]:
+        if st.button("English", key="en"):
+            st.session_state.selected_lang = 'en'
+    with lang_cols[1]:
+        if st.button("Hindi", key="hi"):
+            st.session_state.selected_lang = 'hi'
+    with lang_cols[2]:
+        if st.button("Bengali", key="bn"):
+            st.session_state.selected_lang = 'bn'
+    with lang_cols[3]:
+        if st.button("Tamil", key="ta"):
+            st.session_state.selected_lang = 'ta'
+    with lang_cols[4]:
+        if st.button("Telugu", key="te"):
+            st.session_state.selected_lang = 'te'
     
     # Generate button
     if st.button("Generate Content", type="primary"):
@@ -417,44 +230,14 @@ def main():
         elif not description:
             st.error("Please provide a product description")
         else:
-            # Show loading spinner
             with st.spinner("Generating marketing content... This may take a few moments."):
-                try:
-                    # Prepare image data
-                    image_data = uploaded_file.read() if uploaded_file else None
-                    
-                    # Call backend API
-                    result = call_backend_api(image_data, description, craft_type)
-                    
-                    # Store successful result
-                    st.session_state.generated_content = result
-                    st.session_state.last_successful_result = result
-                    st.session_state.image_uploaded = True if uploaded_file else False
-                    st.session_state.backend_status = "up"
-                    
-                except ConnectionError as e:
-                    st.session_state.backend_status = "down"
-                    st.markdown(f"""
-                    <div class="error-message">
-                        ❌ Connection Error: {str(e)}
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Show last successful result if available
-                    if st.session_state.last_successful_result:
-                        st.info("Showing your last successfully generated content:")
-                        st.session_state.generated_content = st.session_state.last_successful_result
-                    else:
-                        st.error("No previous results available. Please try again when the backend is connected.")
-                        st.session_state.generated_content = None
-                        
-                except Exception as e:
-                    st.markdown(f"""
-                    <div class="error-message">
-                        ⚠️ An unexpected error occurred: {str(e)}
-                    </div>
-                    """, unsafe_allow_html=True)
-                    st.session_state.generated_content = None
+                # In a real implementation, this would call the backend API
+                # For demo purposes, we'll use mock data with a delay
+                time.sleep(2)
+                
+                # Set the generated content in session state
+                st.session_state.generated_content = MOCK_RESPONSE
+                st.session_state.image_uploaded = True if uploaded_file else False
     
     # Display results if content has been generated
     if st.session_state.generated_content:
@@ -477,7 +260,7 @@ def main():
         # Product Title
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">📝 Product Title</div>
+            <div class="card-title"><i class="fas fa-heading"></i> Product Title</div>
             <p>{content.get('title', 'No title generated')}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -485,7 +268,7 @@ def main():
         # Product Description
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">📄 Product Description</div>
+            <div class="card-title"><i class="fas fa-align-left"></i> Product Description</div>
             <p>{content.get('description', 'No description generated')}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -493,7 +276,7 @@ def main():
         # Social Media Caption
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">💬 Social Media Caption</div>
+            <div class="card-title"><i class="fas fa-share-alt"></i> Social Media Caption</div>
             <p>{content.get('caption', 'No caption generated')}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -501,28 +284,14 @@ def main():
         # Hashtags
         st.markdown(f"""
         <div class="card">
-            <div class="card-title">#️⃣ Hashtags</div>
+            <div class="card-title"><i class="fas fa-hashtag"></i> Hashtags</div>
             <p>{content.get('hashtags', 'No hashtags generated')}</p>
         </div>
         """, unsafe_allow_html=True)
         
-        # Mobile preview
-        if st.session_state.mobile_preview and st.session_state.image_uploaded:
-            st.markdown("### 📱 Mobile Preview")
-            st.markdown(f"""
-            <div class="mobile-preview">
-                <div class="mobile-header">Artisan Marketplace</div>
-                <img src="data:image/png;base64,{image_to_base64(uploaded_file)}" class="mobile-image" />
-                <div class="mobile-title">{content.get('title', 'Product Title')}</div>
-                <div class="mobile-description">{content.get('description', 'No description generated')}</div>
-                <div class="mobile-price">$35.00</div>
-                <button class="mobile-button">Add to Cart</button>
-            </div>
-            """, unsafe_allow_html=True)
-        
         # Copy to clipboard functionality
         copy_text = f"{content.get('title', '')}\n\n{content.get('description', '')}\n\n{content.get('caption', '')}\n\n{content.get('hashtags', '')}"
-        st.text_area("Copy all content", copy_text, height=200, key="copy_area")
+        st.text_area("Copy all content", copy_text, height=200)
         
         if st.button("Copy to Clipboard", key="copy_btn"):
             # This would use pyperclip in a real environment
