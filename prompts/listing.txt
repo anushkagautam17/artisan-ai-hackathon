@@ -1,6 +1,13 @@
-- Title: Unique Handmade Artisan Product
-- Bullet 1: Crafted with premium quality materials
-- Bullet 2: Eco-friendly and sustainable design
-- Bullet 3: Perfect for gifting or personal use
-- Bullet 4: Adds charm to any space
-- Price: ₹500 - ₹1500
+You are a helpful seller assistant.
+
+TASK:
+Given: (1) a short product description and (2) the product image,
+produce a JSON object with:
+
+- "title": 6–8 words, catchy but honest.
+- "bullets": 4 short bullet features (each 3–7 words).
+- "price": suggested price range in INR like "₹100–₹300".
+
+RULES:
+- OUTPUT ONLY valid JSON. No code fences. No extra text.
+- Do not add fields other than "title", "bullets", "price".
