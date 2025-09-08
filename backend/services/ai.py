@@ -1,4 +1,14 @@
-import base64
+﻿import base64
+import json
+import os
+from typing import Dict, Any, List, Optional
+
+from pydantic import BaseModel, ValidationError, Field
+
+# ---------- Simulation Mode (for testing without Google credentials) ----------
+SIMULATION_MODE = True  # Set to False when you have real Google credentials
+
+# ---------- Pydantic schema for safe parsing ----------
 import json
 import os
 from typing import Dict, Any, List, Optional
@@ -9,12 +19,45 @@ from pydantic import BaseModel, ValidationError, Field
 from dotenv import load_dotenv
 load_dotenv()
 
+SIMULATION_MODE = True  # Set to False when you have real Google credentials
+
 # ---------- Pydantic schema for safe parsing ----------
 class Listing(BaseModel):
     title: str
     bullets: List[str] = Field(min_items=1)
     price: str
 
+def validate_and_clamp_price(price_str: str) -> str:
+    """
+    Validates the price string from the AI.
+    If the price is outside the expected range (â‚¹50 - â‚¹5000),
+    it clamps it to the nearest boundary and adds a note.
+    """
+    # Default range bounds
+    min_price = 50
+    max_price = 5000
+    
+    try:
+        # Extract numbers from strings like "â‚¹350 - â‚¹600" or "â‚¹1000"
+        import re
+        numbers = re.findall(r'â‚¹(\d+)', price_str)
+        if numbers:
+            # Take the first number (lower bound) for checking
+            first_price = int(numbers[0])
+            
+            # Check if the price is outside our desired range
+            if first_price < min_price:
+                return f"â‚¹{min_price} - â‚¹{max_price} (Price adjusted to minimum)"
+            elif first_price > max_price:
+                return f"â‚¹{min_price} - â‚¹{max_price} (Price adjusted to maximum)"
+            
+        # If it's within range or we can't parse it, return the original
+        return price_str
+        
+    except (ValueError, IndexError):
+        # If anything goes wrong in parsing, return a default safe price
+        return f"â‚¹{min_price} - â‚¹{max_price} (Default price)"
+    
 # ---------- Prompt loading ----------
 PROMPT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "prompts")
 LISTING_PROMPT_PATH = os.path.join(PROMPT_DIR, "listing.txt")
@@ -69,7 +112,7 @@ Follow the RULES strictly and return ONLY JSON.
 # ---------- OpenAI fallback ----------
 def _openai_generate(image_bytes: bytes, description: str) -> str:
     """
-    Uses OpenAI (gpt-4o-mini) for image+text → JSON-only output.
+    Uses OpenAI (gpt-4o-mini) for image+text â†’ JSON-only output.
     """
     import openai
     openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -98,6 +141,21 @@ def _openai_generate(image_bytes: bytes, description: str) -> str:
 
 # ---------- Public function ----------
 def generate_listing(image_bytes: bytes, description: str, target_lang: Optional[str] = None) -> Dict[str, Any]:
+    if SIMULATION_MODE:
+        # Return simulated data for testing
+        print("DEBUG: Using simulation mode (no Google API calls)")
+        return {
+            "title": "Handwoven Bamboo Basket with Leather Handles",
+            "bullets": [
+                "Handcrafted from natural bamboo",
+                "Durable leather handles for easy carrying",
+                "Traditional artisan craftsmanship",
+                "Perfect for storage or decorative use"
+            ],
+            "price": "₹450 - ₹800"
+        }
+    
+    # ... rest of your original code for real API calls ...
     """
     1) Calls AI (Vertex or OpenAI) to get JSON
     2) Validates JSON to required shape
@@ -105,7 +163,7 @@ def generate_listing(image_bytes: bytes, description: str, target_lang: Optional
     """
     raw = _vertex_generate(image_bytes, description) if USE_VERTEX else _openai_generate(image_bytes, description)
 
-    # Sometimes models wrap JSON in code fences — strip gracefully
+    # Sometimes models wrap JSON in code fences â€” strip gracefully
     cleaned = raw.strip()
     if cleaned.startswith("```"):
         cleaned = cleaned.strip("`")
@@ -131,7 +189,8 @@ def generate_listing(image_bytes: bytes, description: str, target_lang: Optional
         raise RuntimeError(f"AI JSON missing required fields or wrong types:\n{e}\nRaw:\n{data}")
 
     result = listing.dict()
-
+    result["price"] = validate_and_clamp_price(result["price"])
+    
     # Optional translation
     if target_lang and target_lang.lower() != "en":
         try:
@@ -144,3 +203,4 @@ def generate_listing(image_bytes: bytes, description: str, target_lang: Optional
             result["translation_error"] = str(e)
 
     return result
+
