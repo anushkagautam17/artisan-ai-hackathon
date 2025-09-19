@@ -49,24 +49,33 @@ async def root():
 async def generate_listing_endpoint(
     image: UploadFile = File(...),
     description: str = Form(...),
-    target_lang: str = Form("en"),  # default English, can be "hi", "bn", etc.
+    target_lang: str = Form("en"),
 ):
     try:
+        print(f"DEBUG: Received request - description: '{description}', target_lang: '{target_lang}'")
+        
         # Read and resize the image
         image_data = await image.read()
+        print(f"DEBUG: Image size: {len(image_data)} bytes")
+        
         if not image_data:
             raise HTTPException(status_code=400, detail="No image data received")
 
         resized_image = resize_image(image_data)
+        print(f"DEBUG: Resized image size: {len(resized_image)} bytes")
 
-        # 🔥 Call the real AI pipeline (Gemini/OpenAI + Translation)
+        # 🔥 Call the real AI pipeline
         result = generate_listing(
             image_bytes=resized_image, description=description, target_lang=target_lang
         )
 
+        print("DEBUG: Success! Returning result")
         return result
 
     except Exception as e:
+        print(f"DEBUG: Error occurred: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 

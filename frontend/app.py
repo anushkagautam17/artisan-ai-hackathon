@@ -5,6 +5,7 @@ import io
 import base64
 import time
 import json
+import random
 
 # Set page configuration
 st.set_page_config(
@@ -270,18 +271,17 @@ def init_session_state():
     if 'mobile_preview' not in st.session_state:
         st.session_state.mobile_preview = False
 
-# Function to check backend status
+# Function to check backend status (SIMULATED - for demo purposes)
 def check_backend():
     try:
-        # Replace with your actual backend health check endpoint
-        response = requests.get("http://localhost:8000/health", timeout=5)
-        if response.status_code == 200:
+        # SIMULATED: 70% chance of success, 30% chance of failure for demo
+        if random.random() < 0.7:  # 70% success rate
             st.session_state.backend_status = "up"
             return True
         else:
             st.session_state.backend_status = "down"
             return False
-    except requests.exceptions.RequestException:
+    except:
         st.session_state.backend_status = "down"
         return False
 
@@ -301,17 +301,12 @@ def image_to_base64(image):
 
 # Function to call backend API (with fallback handling)
 def call_backend_api(image_data, description, craft_type):
-    # Check backend status first
+    # Check backend status first (simulated)
     if not check_backend():
         raise ConnectionError("Backend service is unavailable")
     
-    # In a real implementation, this would call the actual backend API
-    # For demo purposes, we'll simulate an API call with a delay
+    # Simulate API processing time
     time.sleep(2)
-    
-    # Simulate occasional backend failures for demonstration
-    if time.time() % 5 < 1:  # Roughly 20% of the time
-        raise ConnectionError("Backend service temporarily unavailable")
     
     # Return mock response
     return MOCK_RESPONSE
@@ -507,7 +502,7 @@ def main():
         """, unsafe_allow_html=True)
         
         # Mobile preview
-        if st.session_state.mobile_preview and st.session_state.image_uploaded:
+        if st.session_state.mobile_preview and st.session_state.image_uploaded and uploaded_file:
             st.markdown("### 📱 Mobile Preview")
             st.markdown(f"""
             <div class="mobile-preview">
@@ -525,8 +520,6 @@ def main():
         st.text_area("Copy all content", copy_text, height=200, key="copy_area")
         
         if st.button("Copy to Clipboard", key="copy_btn"):
-            # This would use pyperclip in a real environment
-            # For Streamlit Cloud, we use a text area that users can copy from
             st.info("Please manually copy the content from the text area above")
     
     # Footer
