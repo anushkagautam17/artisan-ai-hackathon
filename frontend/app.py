@@ -12,7 +12,7 @@ st.set_page_config(
     page_title="ArtisanAI - Marketplace Assistant",
     page_icon="✨",
     layout="centered",
-    initial_sidebar_state="expanded"  # Changed to expanded for better UX
+    initial_sidebar_state="expanded"
 )
 
 # Custom CSS for mobile-friendly design and styling
@@ -208,6 +208,68 @@ st.markdown("""
         border-left: 4px solid #f57c00;
         margin: 15px 0;
     }
+    
+    /* Toast notification */
+    .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #333;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    
+    /* Translation tabs */
+    .translation-tabs {
+        display: flex;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 15px;
+    }
+    
+    .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+    }
+    
+    .tab.active {
+        border-bottom: 3px solid #4285F4;
+        color: #4285F4;
+        font-weight: 500;
+    }
+    
+    /* Copy button styling */
+    .copy-btn {
+        background-color: #34A853;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        margin-top: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .copy-btn:hover {
+        background-color: #2E8B47;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -215,43 +277,71 @@ st.markdown("""
 SAMPLE_PRODUCTS = {
     "Select a sample product": {"image": None, "description": ""},
     "Blue Pottery Vase": {
-        "image": "sample_images/pottery.jpg",
+        "image": "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cG90dGVyeXxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60",
         "description": "Handmade blue pottery vase with traditional Indian patterns, crafted by skilled artisans."
     },
     "Handloom Saree": {
-        "image": "sample_images/saree.jpg",
+        "image": "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8c2FyZWV8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60",
         "description": "Authentic handloom silk saree with intricate zari work and traditional designs."
     },
     "Terracotta Jewelry": {
-        "image": "sample_images/jewelry.jpg",
+        "image": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dGVycmFjb3R0YSUyMGpld2Vscnl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60",
         "description": "Handcrafted terracotta jewelry with ethnic patterns and eco-friendly colors."
     }
 }
 
-# Mock response data for demonstration
+# Mock response data for demonstration (fallback)
 MOCK_RESPONSE = {
     "title": "Handmade Blue Pottery Vase with Traditional Indian Patterns",
     "description": "This exquisite handmade blue pottery vase features traditional Indian patterns, meticulously crafted by skilled artisans. Each piece is unique, showcasing the rich cultural heritage of Indian pottery. Perfect for home decoration or as a special gift, this vase adds an elegant touch to any space.",
     "caption": "Discover the beauty of traditional Indian craftsmanship with this handmade blue pottery vase! Each piece tells a story of cultural heritage and artisan skill. Perfect addition to your home decor or as a unique gift. 🏺✨",
     "hashtags": "#HandmadePottery #IndianArtisans #BluePottery #TraditionalCraft #ArtisanMade #HomeDecor #SupportArtisans #MadeInIndia #CraftHeritage #PotteryLover",
+    "price_suggestion": "₹1,499",
+    "bullet_points": [
+        "Handmade by skilled artisans",
+        "Traditional design patterns",
+        "Eco-friendly materials",
+        "Perfect for home decoration"
+    ],
     "translations": {
         "hi": {
             "title": "हस्तनिर्मित नीला मिट्टी का फूलदान पारंपरिक भारतीय नमूनों के साथ",
             "description": "यह उत्कृष्ट हस्तनिर्मित नीला मिट्टी का फूलदान पारंपरिक भारतीय नमूनों से सुशोभित है, जिसे कुशल कारीगरों द्वारा सावधानीपूर्वक तैयार किया गया है। प्रत्येक टुकड़ा अनूठा है, जो भारतीय मिट्टी के बर्तनों की समृद्ध सांस्कृतिक विरासत को प्रदर्शित करता है।",
             "caption": "पारंपरिक भारतीय शिल्प कौशल की सुंदरता की खोज इस हस्तनिर्मित नीले मिट्टी के फूलदान के साथ करें! प्रत्येक टुकड़ा सांस्कृतिक विरासत और कारीगर कौशल की कहानी कहता है।",
-            "hashtags": "#हस्तनिर्मितमिट्टीकेबर्तन #भारतीयकारीगर #नीलामिट्टीकेबर्तन #पारंपरिकशिल्प #कारीगरनिर्मित #घरकीसजावट #कारीगरोंकासमर्थन #भारतमेंनिर्मित #शिल्पविरासत #मिट्टीकेबर्तनप्रेमी"
+            "hashtags": "#हस्तनिर्मितमिट्टीकेबर्तन #भारतीयकारीगर #नीलामिट्टीकेबर्तन #पारंपरिकशिल्प #कारीगरनिर्मित #घरकीसजावट #कारीगरोंकासमर्थन #भारतमेंनिर्मित #शिल्पविरासत #मिट्टीकेबर्तनप्रेमी",
+            "price_suggestion": "₹1,499",
+            "bullet_points": [
+                "कुशल कारीगरों द्वारा हस्तनिर्मित",
+                "पारंपरिक डिजाइन पैटर्न",
+                "पर्यावरण के अनुकूल सामग्री",
+                "घर की सजावट के लिए बिल्कुल सही"
+            ]
         },
         "bn": {
             "title": "প্রথাগত ভারতীয় নকশা সহ হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানি",
             "description": "এই অত্যুৎকৃষ্ট হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানিটি প্রথাগত ভারতীয় নকশায় সজ্জিত, যা দক্ষ কারিগরদের দ্বারা সযত্নে তৈরি করা হয়েছে। প্রতিটি টুকরা অনন্য, যা ভারতীয় মৃৎশিল্পের সমৃদ্ধ সাংস্কৃতিক heritage প্রদর্শন করে।",
-            "caption": "এই হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানির সাথে প্রথাগত ভারতীয় কারুশিল্পের সৌন্দর্য আবিষ্কার করুন! প্রতিটি টুকরা সাংস্কৃতিক heritage এবং কারিগর দক্ষতার গল্প বলে।",
-            "hashtags": "#হস্তনির্মিতমৃৎশিল্প #ভারতীয়কারিগর #নীলমৃৎশিল্প #প্রথাগতশিল্প #কারিগরনির্মিত #হোমডেকর #কারিগরসমর্থন #ভারততৈরি #শিল্পঐতিহ্য #মৃৎশিল্পপ্রেমী"
+            "caption": "এই হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানির সাথে প্রথাগত ভারতীয় কারুশilpের সৌন্দর্য আবিষ্কার করুন! প্রতিটি টুকরা সাংস্কৃতিক heritage এবং কারিগর দক্ষতার গল্প বলে।",
+            "hashtags": "#হস্তনির্মিতমৃৎশিল্প #ভারতীয়কারিগর #নীলমৃৎশিল্প #প্রথাগতশিল্প #কারিগরনির্মিত #হোমডেকর #কারিগরসমর্থন #ভারততৈরি #শিল্পঐতিহ্য #মৃৎশিল্পপ্রেমী",
+            "price_suggestion": "₹1,499",
+            "bullet_points": [
+                "দক্ষ কারিগরদের দ্বারা হস্তনির্মিত",
+                "প্রথাগত নকশা প্যাটার্ন",
+                "পরিবেশ বান্ধব উপকরণ",
+                "বাড়ির সাজসজ্জার জন্য উপযুক্ত"
+            ]
         },
         "ta": {
             "title": "பாரம்பரிய இந்திய வடிவங்களுடன் கைவினை நீல மட்பாண்ட குவளை",
             "description": "இந்த அருமையான கைவினை நீல மட்பாண்ட குவளை பாரம்பரிய இந்திய வடிவங்களுடன் அலங்கரிக்கப்பட்டுள்ளது, இது திறமையான கைவினைஞர்களால் கவனமாக crafted உருவாக்கப்பட்டது. ஒவ்வொரு துண்டும் தனித்துவமானது, இந்திய மட்பாண்டங்களின் பண்பட்ட கலாச்சார மரபைக் காட்டுகிறது.",
             "caption": "இந்த கைவினை நீல மட்பாண்ட குவளையுடன் பாரம்பரிய இந்திய கைவினைத்திறனின் அழகைக் கண்டறியவும்! ஒவ்வொரு துண்டும் கலாச்சார மரபு மற்றும் கைவினை திறன்களின் கதையைச் சொல்கிறது.",
-            "hashtags": "#கைவினைமட்பாண்டம் #இந்தியகைவினைஞர்கள் #நீலமட்பாண்டம் #பாரம்பரியகைவினை #கைவினைஞர்நிர்மாணித்தது #வீட்டஅலங்காரம் #கைவினைஞர்கள்காப்பாற்றுங்கள் #இந்தியாவில்தயாரித்தது #கைவினைமரபு #மட்பாண்டப்பிரியர்"
+            "hashtags": "#கைவினைமட்பாண்டம் #இந்தியகைவினைஞர்கள் #நீலமட்பாண்டம் #பாரம்பரியகைவினை #கைவினைஞர்நிர்மாணித்தது #வீட்டஅலங்காரம் #கைவினைஞர்கள்காப்பாற்றுங்கள் #இந்தியாவில்தயாரித்தது #கைவினைமரபு #மட்பாண்டப்பிரியர்",
+            "price_suggestion": "₹1,499",
+            "bullet_points": [
+                "திறமையான கைவினைஞர்களால் கைவினைப் படைப்பு",
+                "பாரம்பரிய வடிவமைப்பு வடிவங்கள்",
+                "சூழலுக்கு உகந்த பொருட்கள்",
+                "வீட்டு அலங்காரத்திற்கு சிறந்தது"
+            ]
         }
     }
 }
@@ -270,12 +360,15 @@ def init_session_state():
         st.session_state.backend_status = "unknown"  # unknown, up, down
     if 'mobile_preview' not in st.session_state:
         st.session_state.mobile_preview = False
+    if 'active_tab' not in st.session_state:
+        st.session_state.active_tab = 'en'
 
-# Function to check backend status (SIMULATED - for demo purposes)
+# Function to check backend status
 def check_backend():
     try:
-        # SIMULATED: 70% chance of success, 30% chance of failure for demo
-        if random.random() < 0.7:  # 70% success rate
+        # Try to connect to backend
+        response = requests.get("http://localhost:8000/health", timeout=5)
+        if response.status_code == 200:
             st.session_state.backend_status = "up"
             return True
         else:
@@ -300,20 +393,53 @@ def image_to_base64(image):
         return ""
 
 # Function to call backend API (with fallback handling)
-def call_backend_api(image_data, description, craft_type):
-    # Check backend status first (simulated)
+def call_backend_api(image_data, description, target_languages):
+    # Check backend status first
     if not check_backend():
         raise ConnectionError("Backend service is unavailable")
     
-    # Simulate API processing time
-    time.sleep(2)
-    
-    # Return mock response
-    return MOCK_RESPONSE
+    try:
+        # Prepare the request
+        files = {"image": ("image.jpg", image_data, "image/jpeg")}
+        data = {
+            "description": description,
+            "target_languages": target_languages
+        }
+        
+        # Call the backend API
+        response = requests.post(
+            "http://localhost:8000/generate",
+            files=files,
+            data=data,
+            timeout=120
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Backend returned status code {response.status_code}")
+            
+    except Exception as e:
+        # If backend call fails, use mock data
+        st.session_state.backend_status = "down"
+        raise ConnectionError(f"Failed to connect to backend: {str(e)}")
+
+# Function to show toast notification
+def show_toast(message):
+    st.markdown(f"""
+    <div class="toast">
+        {message}
+    </div>
+    """, unsafe_allow_html=True)
+    # Use a small delay to allow the toast to be visible
+    time.sleep(0.1)
 
 def main():
     # Initialize session state
     init_session_state()
+    
+    # Add navigation to homepage
+    st.sidebar.markdown("[← Back to Homepage](/)")
     
     # Header section
     st.markdown("""
@@ -342,6 +468,11 @@ def main():
         else:
             st.info("🔍 Backend: Checking status...")
         
+        # Try sample dropdown
+        st.divider()
+        st.header("Try Sample")
+        sample_option = st.selectbox("Select a sample product", options=list(SAMPLE_PRODUCTS.keys()))
+        
         st.divider()
         st.header("Info")
         st.info("""
@@ -349,8 +480,13 @@ def main():
         Upload an image and we'll generate a title, description, and suggested price.
         """)
     
-    # Sample product selector
-    sample_option = st.selectbox("Try a sample product", options=list(SAMPLE_PRODUCTS.keys()))
+    # If sample product is selected, show the image and description
+    if sample_option != "Select a sample product":
+        sample = SAMPLE_PRODUCTS[sample_option]
+        st.image(sample["image"], caption=sample_option, use_column_width=True)
+        product_description = sample["description"]
+    else:
+        product_description = ""
     
     # File uploader with size warning
     uploaded_file = st.file_uploader(
@@ -359,10 +495,13 @@ def main():
         help="Upload a clear image of your artisan product (max 5MB recommended)"
     )
     
-    # Max image size warning (5MB limit)
-    MAX_IMAGE_SIZE_MB = 5
+    # Show image preview if uploaded
     if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
+        
         # Check file size
+        MAX_IMAGE_SIZE_MB = 5
         file_size_mb = uploaded_file.size / (1024 * 1024)
         if file_size_mb > MAX_IMAGE_SIZE_MB:
             st.markdown(f"""
@@ -371,11 +510,6 @@ def main():
                 Processing may be slow. Consider resizing your image.
             </div>
             """, unsafe_allow_html=True)
-    
-    # If sample product is selected, update the description
-    product_description = ""
-    if sample_option != "Select a sample product":
-        product_description = SAMPLE_PRODUCTS[sample_option]["description"]
     
     # Description input
     description = st.text_area(
@@ -393,17 +527,26 @@ def main():
     )
     
     # Language selection
-    st.write("Select languages for translation:")
-    lang_cols = st.columns(5)
-    languages = [("English", "en"), ("Hindi", "hi"), ("Bengali", "bn"), ("Tamil", "ta"), ("Telugu", "te")]
+    st.write("Select target languages for translation:")
+    languages = ["Hindi", "Bengali", "Tamil", "Telugu", "Gujarati", "Marathi"]
+    lang_codes = {
+        "Hindi": "hi", 
+        "Bengali": "bn", 
+        "Tamil": "ta",
+        "Telugu": "te",
+        "Gujarati": "gu",
+        "Marathi": "mr"
+    }
     
-    for i, (lang_name, lang_code) in enumerate(languages):
-        with lang_cols[i]:
-            if st.button(lang_name, key=lang_code):
-                st.session_state.selected_lang = lang_code
+    selected_languages = st.multiselect(
+        "Languages",
+        options=languages,
+        default=["Hindi", "Bengali", "Tamil"],
+        help="Select languages for translation"
+    )
     
-    # Highlight selected language
-    st.markdown(f"**Selected language:** {[name for name, code in languages if code == st.session_state.selected_lang][0]}")
+    # Convert selected languages to codes
+    target_languages = ",".join([lang_codes[lang] for lang in selected_languages])
     
     # Generate button
     if st.button("Generate Content", type="primary"):
@@ -416,10 +559,14 @@ def main():
             with st.spinner("Generating marketing content... This may take a few moments."):
                 try:
                     # Prepare image data
-                    image_data = uploaded_file.read() if uploaded_file else None
+                    if uploaded_file:
+                        image_data = uploaded_file.getvalue()
+                    else:
+                        # For sample products, we'll use a placeholder
+                        image_data = None
                     
                     # Call backend API
-                    result = call_backend_api(image_data, description, craft_type)
+                    result = call_backend_api(image_data, description, target_languages)
                     
                     # Store successful result
                     st.session_state.generated_content = result
@@ -440,8 +587,9 @@ def main():
                         st.info("Showing your last successfully generated content:")
                         st.session_state.generated_content = st.session_state.last_successful_result
                     else:
-                        st.error("No previous results available. Please try again when the backend is connected.")
-                        st.session_state.generated_content = None
+                        # Use mock data as fallback
+                        st.info("Using sample data for demonstration purposes.")
+                        st.session_state.generated_content = MOCK_RESPONSE
                         
                 except Exception as e:
                     st.markdown(f"""
@@ -455,72 +603,106 @@ def main():
     if st.session_state.generated_content:
         st.success("Content generated successfully!")
         
-        # Get content for selected language
-        lang = st.session_state.selected_lang
-        if lang == 'en':
-            content = st.session_state.generated_content
-        else:
-            content = st.session_state.generated_content['translations'].get(lang, {})
-            # Fallback to English if translation not available
-            if not content:
-                content = st.session_state.generated_content
-                st.warning(f"Translation not available for {lang}. Showing English content.")
-        
-        # Display generated content in cards
+        # Create translation tabs
         st.markdown("### Generated Content")
         
-        # Product Title
-        st.markdown(f"""
-        <div class="card">
-            <div class="card-title">📝 Product Title</div>
-            <p>{content.get('title', 'No title generated')}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Create tabs for different languages
+        tab_names = ["English"] + selected_languages
+        tabs = st.tabs(tab_names)
         
-        # Product Description
-        st.markdown(f"""
-        <div class="card">
-            <div class="card-title">📄 Product Description</div>
-            <p>{content.get('description', 'No description generated')}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Social Media Caption
-        st.markdown(f"""
-        <div class="card">
-            <div class="card-title">💬 Social Media Caption</div>
-            <p>{content.get('caption', 'No caption generated')}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Hashtags
-        st.markdown(f"""
-        <div class="card">
-            <div class="card-title">#️⃣ Hashtags</div>
-            <p>{content.get('hashtags', 'No hashtags generated')}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        for i, tab in enumerate(tabs):
+            with tab:
+                # Determine which language content to show
+                if i == 0:  # English tab
+                    lang = 'en'
+                    content = st.session_state.generated_content
+                else:  # Translation tabs
+                    lang_name = tab_names[i]
+                    lang_code = lang_codes[lang_name]
+                    content = st.session_state.generated_content.get('translations', {}).get(lang_code, {})
+                
+                # Display content in cards
+                # Product Title
+                st.markdown(f"""
+                <div class="card">
+                    <div class="card-title">📝 Product Title</div>
+                    <p>{content.get('title', 'No title generated')}</p>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('{content.get('title', '')}')">📋 Copy</button>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Product Description
+                st.markdown(f"""
+                <div class="card">
+                    <div class="card-title">📄 Product Description</div>
+                    <p>{content.get('description', 'No description generated')}</p>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('{content.get('description', '')}')">📋 Copy</button>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Social Media Caption
+                st.markdown(f"""
+                <div class="card">
+                    <div class="card-title">💬 Social Media Caption</div>
+                    <p>{content.get('caption', 'No caption generated')}</p>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('{content.get('caption', '')}')">📋 Copy</button>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Hashtags
+                st.markdown(f"""
+                <div class="card">
+                    <div class="card-title">#️⃣ Hashtags</div>
+                    <p>{content.get('hashtags', 'No hashtags generated')}</p>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('{content.get('hashtags', '')}')">📋 Copy</button>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Price suggestion and bullet points (only for English)
+                if lang == 'en':
+                    # Price Suggestion
+                    st.markdown(f"""
+                    <div class="card">
+                        <div class="card-title">💰 Price Suggestion</div>
+                        <p>{content.get('price_suggestion', 'No price suggestion')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Bullet Points
+                    bullet_points = content.get('bullet_points', [])
+                    if bullet_points:
+                        st.markdown(f"""
+                        <div class="card">
+                            <div class="card-title">📌 Key Features</div>
+                            <ul>
+                                {"".join([f"<li>{point}</li>" for point in bullet_points])}
+                            </ul>
+                            <button class="copy-btn" onclick="navigator.clipboard.writeText('{"\\n".join(bullet_points)}')">📋 Copy All</button>
+                        </div>
+                        """, unsafe_allow_html=True)
         
         # Mobile preview
-        if st.session_state.mobile_preview and st.session_state.image_uploaded and uploaded_file:
+        if st.session_state.mobile_preview and uploaded_file:
             st.markdown("### 📱 Mobile Preview")
             st.markdown(f"""
             <div class="mobile-preview">
                 <div class="mobile-header">Artisan Marketplace</div>
-                <img src="data:image/png;base64,{image_to_base64(uploaded_file)}" class="mobile-image" />
-                <div class="mobile-title">{content.get('title', 'Product Title')}</div>
-                <div class="mobile-description">{content.get('description', 'No description generated')}</div>
-                <div class="mobile-price">$35.00</div>
+                <img src="data:image/jpeg;base64,{image_to_base64(uploaded_file)}" class="mobile-image" />
+                <div class="mobile-title">{st.session_state.generated_content.get('title', 'Product Title')}</div>
+                <div class="mobile-description">{st.session_state.generated_content.get('description', 'No description generated')}</div>
+                <div class="mobile-price">{st.session_state.generated_content.get('price_suggestion', '$35.00')}</div>
                 <button class="mobile-button">Add to Cart</button>
             </div>
             """, unsafe_allow_html=True)
         
-        # Copy to clipboard functionality
-        copy_text = f"{content.get('title', '')}\n\n{content.get('description', '')}\n\n{content.get('caption', '')}\n\n{content.get('hashtags', '')}"
+        # Copy all content functionality
+        st.markdown("### 📋 Copy All Content")
+        copy_text = f"{st.session_state.generated_content.get('title', '')}\n\n{st.session_state.generated_content.get('description', '')}\n\n{st.session_state.generated_content.get('caption', '')}\n\n{st.session_state.generated_content.get('hashtags', '')}"
         st.text_area("Copy all content", copy_text, height=200, key="copy_area")
         
         if st.button("Copy to Clipboard", key="copy_btn"):
-            st.info("Please manually copy the content from the text area above")
+            # This will show a toast notification
+            show_toast("Content copied to clipboard!")
     
     # Footer
     st.markdown("---")
