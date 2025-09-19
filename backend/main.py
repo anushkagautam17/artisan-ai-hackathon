@@ -2,10 +2,9 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import io
-import os
 
-# ✅ Import your Week-2 AI service
-from services.ai import generate_listing
+# ✅ Correct import for running from project root
+from backend.services.ai import generate_listing
 
 app = FastAPI(title="Artisan Marketplace API", version="1.0.0")
 
@@ -20,14 +19,14 @@ app.add_middleware(
 
 # Helper function to resize image
 def resize_image(image_data: bytes, max_size: tuple = (512, 512)) -> bytes:
-    """Resize image to reduce file size before processing"""
+    """Resize image to reduce file size before processing."""
     try:
         image = Image.open(io.BytesIO(image_data))
 
         # Convert RGBA (transparent PNG) to RGB (white background) for JPEG
         if image.mode == "RGBA":
             background = Image.new("RGB", image.size, (255, 255, 255))
-            background.paste(image, mask=image.split()[3])  # Use alpha channel as mask
+            background.paste(image, mask=image.split()[3])
             image = background
 
         image.thumbnail(max_size, Image.Resampling.LANCZOS)
@@ -56,8 +55,6 @@ async def generate_listing_endpoint(
         
         # Read and resize the image
         image_data = await image.read()
-        print(f"DEBUG: Image size: {len(image_data)} bytes")
-        
         if not image_data:
             raise HTTPException(status_code=400, detail="No image data received")
 
@@ -66,7 +63,9 @@ async def generate_listing_endpoint(
 
         # 🔥 Call the real AI pipeline
         result = generate_listing(
-            image_bytes=resized_image, description=description, target_lang=target_lang
+            image_bytes=resized_image,
+            description=description,
+            target_lang=target_lang
         )
 
         print("DEBUG: Success! Returning result")
@@ -74,12 +73,11 @@ async def generate_listing_endpoint(
 
     except Exception as e:
         print(f"DEBUG: Error occurred: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+
