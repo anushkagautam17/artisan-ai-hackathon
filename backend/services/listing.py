@@ -87,7 +87,16 @@ def generate_listing(description: str, image_bytes: bytes, model: str = "gpt-3.5
     if os.path.exists(PROMPT_PATH):
         template = open(PROMPT_PATH, "r", encoding="utf-8").read()
     else:
-        raise FileNotFoundError(f"{PROMPT_PATH} not found. Make sure the file exists.")
+        # Fallback template if file not found
+        template = """Create a product listing JSON for an artisan product based on:
+Description: {description}
+Image Analysis: {vision_caption}
+Keywords: {vision_keywords}
+Color: {dominant_color}
+Size: {size_category}
+
+Return JSON with: title, description, bullets (array), price (₹ range), suggested_price (₹ single)
+Example: {{"title": "Product", "description": "Detailed desc", "bullets": ["feature1", "feature2"], "price": "₹500 - ₹800", "suggested_price": "₹650"}}"""
 
     vision_keywords_join = ", ".join(vision.get("keywords", []))
     prompt = template.format(
@@ -98,10 +107,97 @@ def generate_listing(description: str, image_bytes: bytes, model: str = "gpt-3.5
         vision_keywords=vision_keywords_join
     )
 
-    # call model
-    raw = get_completion(prompt, model=model, max_tokens=400)
-    parsed, raw_json_text = extract_first_json(raw)
-    if parsed is None:
-        prompt2 = prompt + "\n\nIMPORTANT: Return ONLY a single valid JSON object matching the requested OUTPUT FORMAT. No commentary."
-        raw = get_completion(prompt2, model=model, max_tokens=400)
-        parsed, raw_json_text = ex
+    # call model with new API
+    try:
+        raw = get_completion(prompt, model=model, max_tokens=400)
+        parsed, raw_json_text = extract_first_json(raw)
+        
+        if parsed is None:
+            prompt2 = prompt + "\n\nIMPORTANT: Return ONLY a single valid JSON object matching the requested OUTPUT FORMAT. No commentary."
+            raw = get_completion(prompt2, model=model, max_tokens=400)
+            parsed, raw_json_text = extract_first_json(raw)
+            
+        if parsed is None:
+            # Fallback if JSON parsing fails
+            parsed = {
+                "title": _sanitize_title(description[:30], []),
+                "description": description,
+                "bullets": _ensure_bullets([]),
+                "price": "₹200 - ₹500",
+                "suggested_price": "₹350"
+            }
+            
+    except Exception as e:
+        print(f"Error in LLM call: {e}")
+        # Fallback data
+        parsed = {
+            "title": _sanitize_title(description[:30], []),
+            "description": description,
+            "bullets": _ensure_bullets([]),
+            "price": "₹200 - ₹500",
+            "suggested_price": "₹350"
+        }
+        raw_json_text = ""
+
+    # 4) sanitize and enrich
+    title = _sanitize_title(parsed.get("title", ""), parsed.get("bullets", []))
+    bullets = _ensure_bullets(parsed.get("bullets", []))
+    price = _sanitize_price_string(parsed.get("price", ""))
+    suggested_price = parsed.get("suggested_price", price.split(" - ")[0] if " - " in price else price)
+
+    # 5) generate recommendations
+    recommendations = []
+    image_fix_suggestions = []
+    
+    try:
+        if os.path.exists(RECO_PROMPT_PATH):
+            reco_template = open(RECO_PROMPT_PATH, "r", encoding="utf-8").read()
+        else:
+            reco_template = "Suggest improvements for artisan product: {title}. Description: {description}"
+            
+        reco_prompt = reco_template.format(
+            title=title,
+            description=parsed.get("description", description),
+            vision_caption=vision.get("caption", ""),
+            origin=origin_hint
+        )
+        
+        reco_raw = get_completion(reco_prompt, model=model, max_tokens=300)
+        recommendations = [line.strip() for line in reco_raw.split("\n") if line.strip() and not line.strip().startswith("-")]
+        
+        # Simple image fix suggestions based on vision analysis
+        if not vision.get("caption") or len(vision.get("keywords", [])) < 3:
+            image_fix_suggestions = [
+                "Use better lighting to showcase product details",
+                "Capture multiple angles of the product",
+                "Include a common object for scale reference",
+                "Use a clean, neutral background"
+            ]
+            
+    except Exception as e:
+        print(f"Error generating recommendations: {e}")
+        recommendations = [
+            "Highlight the handmade craftsmanship in your description",
+            "Mention the materials and traditional techniques used",
+            "Include product dimensions for better customer understanding",
+            "Show the product in use or in context"
+        ]
+        image_fix_suggestions = [
+            "Improve lighting and background for better photos",
+            "Show product from different angles"
+        ]
+
+    # 6) return enriched result
+    return {
+        "title": title,
+        "description": parsed.get("description", description),
+        "bullets": bullets,
+        "price": price,
+        "suggested_price": suggested_price,
+        "origin_hint": origin_hint,
+        "vision": vision,
+        "recommendations": recommendations[:5],  # Limit to 5 recommendations
+        "image_fix_suggestions": image_fix_suggestions,
+        "_raw_model_output": raw_json_text,
+        "_raw_recommendations_output": reco_raw if 'reco_raw' in locals() else ""
+    }

@@ -1,3 +1,4 @@
+# backend/main.py
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
@@ -5,52 +6,62 @@ import io
 import os
 import sys
 from dotenv import load_dotenv
+load_dotenv()  # This loads the .env file
 
-# Add the parent directory to Python path to fix import issues
+# Add the current directory to Python path to fix import issues
 current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.append(parent_dir)
+sys.path.append(current_dir)
 
 # Now try to import - use a try/except to handle different scenarios
 try:
-    from backend.services.ai import generate_listing
-    print("DEBUG: Successfully imported from backend.services.ai")
+    # Try importing from services.ai first
+    from services.ai import generate_listing
+    print("DEBUG: Successfully imported from services.ai")
 except ImportError as e:
-    print(f"DEBUG: Import error: {e}")
+    print(f"DEBUG: Import error from services.ai: {e}")
     try:
-        # Try importing directly from services if backend is the current directory
-        from services.ai import generate_listing
-        print("DEBUG: Successfully imported from services.ai")
+        # Try importing from services.listing
+        from services.listing import generate_listing
+        print("DEBUG: Successfully imported from services.listing")
     except ImportError as e2:
-        print(f"DEBUG: Second import error: {e2}")
-        # Create a mock function for testing
-        def generate_listing(image_bytes, description, target_lang="en", api_key=None):
-            return {
-                "title": f"Beautiful {description.split()[0]} Product",
-                "bullets": [
-                    "Handcrafted by skilled artisans",
-                    "Made with traditional techniques",
-                    "Eco-friendly and sustainable materials",
-                    "Unique design that tells a story"
-                ],
-                "price": "₹1,200 - ₹1,800",
-                "suggested_price": "₹1,499",
-                "origin_hint": "India",
-                "vision": {
-                    "caption": f"A beautiful {description.split()[0]} with intricate details",
-                    "keywords": ["handmade", "artisan", "traditional", "craft", description.split()[0]],
-                    "dominant_color": "Blue"
-                },
-                "recommendations": [
-                    "Use natural lighting for better product photos",
-                    "Show the product from multiple angles",
-                    "Include a story about the artisan who made it"
-                ],
-                "image_fix_suggestions": [
-                    "Crop the image to focus on the product",
-                    "Adjust the brightness for better visibility"
-                ]
-            }
+        print(f"DEBUG: Import error from services.listing: {e2}")
+        try:
+            # Try importing from llm_client
+            from services.llm_client import generate_listing
+            print("DEBUG: Successfully imported from services.llm_client")
+        except ImportError as e3:
+            print(f"DEBUG: Import error from services.llm_client: {e3}")
+            # Create a mock function for testing
+            def generate_listing(image_bytes, description, target_lang="en", api_key=None):
+                print("DEBUG: Using mock generate_listing function")
+                product_type = description.split()[0] if description else "Artisan"
+                return {
+                    "title": f"Handcrafted {product_type} - Traditional Artisan Work",
+                    "bullets": [
+                        "Handmade by skilled artisans using traditional techniques",
+                        "Made with natural, eco-friendly materials",
+                        "Unique design that reflects cultural heritage",
+                        "Perfect for home decoration or as a special gift"
+                    ],
+                    "price": "₹1,200 - ₹1,800",
+                    "suggested_price": "₹1,499",
+                    "origin_hint": "Rajasthan, India" if "pottery" in description.lower() else "India",
+                    "vision": {
+                        "caption": f"A beautiful {product_type} with intricate traditional patterns",
+                        "keywords": ["handmade", "artisan", "traditional", "craft", product_type.lower()],
+                        "dominant_color": "Blue" if "blue" in description.lower() else "Earth tones"
+                    },
+                    "recommendations": [
+                        "Include information about the artisan who created this piece",
+                        "Show the product being used in different settings",
+                        "Highlight the cultural significance of the designs"
+                    ],
+                    "image_fix_suggestions": [
+                        "Use natural light to better show the colors and textures",
+                        "Take photos from multiple angles to showcase details",
+                        "Include a scale reference to show product size"
+                    ]
+                }
 
 # Load environment variables
 load_dotenv()
@@ -119,34 +130,34 @@ async def generate_listing_endpoint(
         resized_image = resize_image(image_data)
         print(f"DEBUG: Resized image size: {len(resized_image)} bytes")
 
-        # Call the AI pipeline - adapt to your ai.py function signature
+        # Call the AI pipeline
         result = generate_listing(
             image_bytes=resized_image,
             description=description,
             target_lang=target_lang
         )
         
-        # Add additional fields that your frontend expects
+        # Enhanced result with all fields expected by frontend
         enhanced_result = {
-            "title": result.get("title", ""),
+            "title": result.get("title", "Product Title"),
             "bullets": result.get("bullets", []),
-            "price": result.get("price", ""),
-            "suggested_price": result.get("price", "").replace("₹", "").split("-")[0].strip() + " (exact)",
-            "origin_hint": "India",  # Default value
-            "vision": {
+            "price": result.get("price", "₹0"),
+            "suggested_price": result.get("suggested_price", result.get("price", "₹0")),
+            "origin_hint": result.get("origin_hint", "India"),
+            "vision": result.get("vision", {
                 "caption": result.get("title", "") + " - Handcrafted with care",
                 "keywords": ["artisan", "handmade", "traditional"],
                 "dominant_color": "Natural"
-            },
-            "recommendations": [
+            }),
+            "recommendations": result.get("recommendations", [
                 "Use natural lighting for photography",
                 "Include product dimensions in description",
                 "Share the story behind this artisan piece"
-            ],
-            "image_fix_suggestions": [
+            ]),
+            "image_fix_suggestions": result.get("image_fix_suggestions", [
                 "Crop to focus on product",
                 "Adjust brightness for better clarity"
-            ]
+            ])
         }
 
         print("DEBUG: Success! Returning result")
