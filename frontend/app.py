@@ -1,3 +1,4 @@
+# frontend/app.py
 import streamlit as st
 import requests
 from PIL import Image
@@ -9,7 +10,7 @@ import random
 
 # Set page configuration
 st.set_page_config(
-    page_title="ArtisanAI - Marketplace Assistant",
+    page_title="MadebyNari - AI Assistant for Artisans",
     page_icon="✨",
     layout="centered",
     initial_sidebar_state="expanded"
@@ -25,7 +26,7 @@ st.markdown("""
     
     .stButton button {
         width: 100%;
-        background-color: #4285F4;
+        background-color: #6a11cb;
         color: white;
         font-weight: 500;
         border-radius: 8px;
@@ -34,16 +35,16 @@ st.markdown("""
     }
     
     .stButton button:hover {
-        background-color: #3367D6;
+        background-color: #2575fc;
         color: white;
     }
     
     .secondary-btn {
-        background-color: #F4B400 !important;
+        background-color: #FF6B6B !important;
     }
     
     .secondary-btn:hover {
-        background-color: #E4A500 !important;
+        background-color: #FF8E8E !important;
     }
     
     /* Card styling */
@@ -56,7 +57,7 @@ st.markdown("""
     }
     
     .card-title {
-        color: #4285F4;
+        color: #6a11cb;
         font-weight: 600;
         margin-bottom: 0.5rem;
         display: flex;
@@ -71,8 +72,9 @@ st.markdown("""
     }
     
     .header h1 {
-        color: #4285F4;
+        color: #6a11cb;
         margin-bottom: 0.5rem;
+        font-family: 'Playfair Display', serif;
     }
     
     .header p {
@@ -91,9 +93,9 @@ st.markdown("""
     }
     
     .lang-btn.active {
-        background-color: #4285F4;
+        background-color: #6a11cb;
         color: white;
-        border-color: #4285F4;
+        border-color: #6a11cb;
     }
     
     /* Mobile preview styling */
@@ -182,7 +184,7 @@ st.markdown("""
     
     .loading-spinner {
         border: 4px solid #f3f3f3;
-        border-top: 4px solid #4285F4;
+        border-top: 4px solid #6a11cb;
         border-radius: 50%;
         width: 40px;
         height: 40px;
@@ -247,8 +249,8 @@ st.markdown("""
     }
     
     .tab.active {
-        border-bottom: 3px solid #4285F4;
-        color: #4285F4;
+        border-bottom: 3px solid #6a11cb;
+        color: #6a11cb;
         font-weight: 500;
     }
     
@@ -269,6 +271,72 @@ st.markdown("""
     
     .copy-btn:hover {
         background-color: #2E8B47;
+    }
+    
+    /* Login/Signup section */
+    .auth-container {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin: 2rem 0;
+    }
+    
+    .auth-tabs {
+        display: flex;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        overflow: hidden;
+        border: 1px solid #ddd;
+    }
+    
+    .auth-tab {
+        flex: 1;
+        padding: 10px;
+        text-align: center;
+        background-color: #f9f9f9;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .auth-tab.active {
+        background-color: #6a11cb;
+        color: white;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
+    
+    .form-submit {
+        background-color: #6a11cb;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .form-submit:hover {
+        background-color: #2575fc;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -320,7 +388,7 @@ MOCK_RESPONSE = {
         "bn": {
             "title": "প্রথাগত ভারতীয় নকশা সহ হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানি",
             "description": "এই অত্যুৎকৃষ্ট হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানিটি প্রথাগত ভারতীয় নকশায় সজ্জিত, যা দক্ষ কারিগরদের দ্বারা সযত্নে তৈরি করা হয়েছে। প্রতিটি টুকরা অনন্য, যা ভারতীয় মৃৎশিল্পের সমৃদ্ধ সাংস্কৃতিক heritage প্রদর্শন করে।",
-            "caption": "এই হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানির সাথে প্রথাগত ভারতীয় কারুশilpের সৌন্দর্য আবিষ্কার করুন! প্রতিটি টুকরা সাংস্কৃতিক heritage এবং কারিগর দক্ষতার গল্প বলে।",
+            "caption": "এই হस्तনির্মিত নীল মৃৎশিল্পের ফুলদানির সাথে প্রথাগত ভারতীয় কারুশিল্পের সৌন্দর্য আবিষ্কার করুন! প্রতিটি টুকরা সাংস্কৃতিক heritage এবং কারিগর দক্ষতার গল্প বলে।",
             "hashtags": "#হস্তনির্মিতমৃৎশিল্প #ভারতীয়কারিগর #নীলমৃৎশিল্প #প্রথাগতশিল্প #কারিগরনির্মিত #হোমডেকর #কারিগরসমর্থন #ভারততৈরি #শিল্পঐতিহ্য #মৃৎশিল্পপ্রেমী",
             "price_suggestion": "₹1,499",
             "bullet_points": [
@@ -362,6 +430,10 @@ def init_session_state():
         st.session_state.mobile_preview = False
     if 'active_tab' not in st.session_state:
         st.session_state.active_tab = 'en'
+    if 'auth_tab' not in st.session_state:
+        st.session_state.auth_tab = 'login'
+    if 'user_type' not in st.session_state:
+        st.session_state.user_type = 'buyer'
 
 # Function to check backend status
 def check_backend():
@@ -434,6 +506,65 @@ def show_toast(message):
     # Use a small delay to allow the toast to be visible
     time.sleep(0.1)
 
+# Login/Signup Section
+def show_auth_section():
+    st.markdown("""
+    <div class="auth-container">
+        <h2 style="text-align: center; color: #6a11cb; margin-bottom: 20px;">Login / Sign Up</h2>
+        
+        <div class="auth-tabs">
+            <div class="auth-tab %s" onclick="setAuthTab('login')">Login</div>
+            <div class="auth-tab %s" onclick="setAuthTab('signup')">Sign Up</div>
+        </div>
+    """ % (
+        "active" if st.session_state.auth_tab == 'login' else "",
+        "active" if st.session_state.auth_tab == 'signup' else ""
+    ), unsafe_allow_html=True)
+    
+    if st.session_state.auth_tab == 'login':
+        col1, col2 = st.columns(2)
+        with col1:
+            st.text_input("Email", key="login_email")
+        with col2:
+            st.text_input("Password", type="password", key="login_password")
+        
+        if st.button("Login", key="login_btn"):
+            st.success("Login successful!")
+            
+    else:  # Sign up
+        # User type selection
+        st.markdown("""
+        <div style="margin-bottom: 20px;">
+            <label class="form-label">I want to sign up as:</label>
+            <div class="auth-tabs">
+                <div class="auth-tab %s" onclick="setUserType('buyer')">Buyer</div>
+                <div class="auth-tab %s" onclick="setUserType('seller')">Seller</div>
+            </div>
+        </div>
+        """ % (
+            "active" if st.session_state.user_type == 'buyer' else "",
+            "active" if st.session_state.user_type == 'seller' else ""
+        ), unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.text_input("Full Name", key="signup_name")
+            st.text_input("Email", key="signup_email")
+        with col2:
+            st.text_input("Phone Number", key="signup_phone")
+            st.text_input("State", key="signup_state")
+        
+        if st.session_state.user_type == 'seller':
+            st.date_input("Date of Birth", key="signup_dob")
+        
+        st.text_input("Password", type="password", key="signup_password")
+        st.text_input("Confirm Password", type="password", key="signup_confirm_password")
+        
+        if st.button("Create Account", key="signup_btn"):
+            st.success("Account created successfully!")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+
 def main():
     # Initialize session state
     init_session_state()
@@ -444,10 +575,13 @@ def main():
     # Header section
     st.markdown("""
     <div class="header">
-        <h1>ArtisanAI 🎨</h1>
+        <h1>MadebyNari 🎨</h1>
         <p>Empowering local artisans with AI-powered tools to market their craft</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Show login/signup section
+    show_auth_section()
     
     # Sidebar for settings and info
     with st.sidebar:
@@ -476,7 +610,7 @@ def main():
         st.divider()
         st.header("Info")
         st.info("""
-        This tool helps local artisans create better product listings using AI.
+        MadebyNari helps local artisans create better product listings using AI.
         Upload an image and we'll generate a title, description, and suggested price.
         """)
     
@@ -708,10 +842,31 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; color: #5F6368;">
+        <p>MadebyNari - Empowering Indian Artisans with AI</p>
         <p>Built with ❤️ for Google Gen AI Exchange Hackathon</p>
-        <p>Powered by Google Cloud AI technologies</p>
     </div>
     """, unsafe_allow_html=True)
+
+# JavaScript for authentication tabs
+auth_js = """
+<script>
+function setAuthTab(tab) {
+    window.parent.postMessage({
+        type: 'streamlit:setComponentValue',
+        value: {auth_tab: tab}
+    }, '*');
+}
+
+function setUserType(type) {
+    window.parent.postMessage({
+        type: 'streamlit:setComponentValue',
+        value: {user_type: type}
+    }, '*');
+}
+</script>
+"""
+
+components.html(auth_js, height=0)
 
 if __name__ == "__main__":
     main()
