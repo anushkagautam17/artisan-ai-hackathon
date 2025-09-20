@@ -2,9 +2,21 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import io
+<<<<<<< HEAD
+=======
+import os
+from dotenv import load_dotenv  # ✅ Added to load .env
+>>>>>>> 3487404 (Updated project with latest fixes and API changes)
 
 # ✅ Correct import for running from project root
 from backend.services.ai import generate_listing
+
+# Load environment variables
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise RuntimeError("OPENAI_API_KEY not found in .env file")
+print("DEBUG: OpenAI API Key loaded successfully")
 
 app = FastAPI(title="Artisan Marketplace API", version="1.0.0")
 
@@ -65,7 +77,12 @@ async def generate_listing_endpoint(
         result = generate_listing(
             image_bytes=resized_image,
             description=description,
+<<<<<<< HEAD
             target_lang=target_lang
+=======
+            target_lang=target_lang,
+            api_key=OPENAI_API_KEY  # ✅ Pass API key to your AI service
+>>>>>>> 3487404 (Updated project with latest fixes and API changes)
         )
 
         print("DEBUG: Success! Returning result")

@@ -1,6 +1,7 @@
 # frontend/app.py
 import sys
 import os
+<<<<<<< HEAD
 
 # Add the parent directory (project root) to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -14,7 +15,18 @@ import time
 import json
 import random
 from backend.services.listing import generate_listing
+=======
+>>>>>>> 13dbf0ddc2d78fe6ddcc130b043ce08e27332612
 
+# Add the parent directory (project root) to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+
+import streamlit as st
+from PIL import Image
+from backend.services.listing import generate_listing
+
+<<<<<<< HEAD
 # Set page configuration
 st.set_page_config(
     page_title="MadebyNari - AI Assistant for Artisans",
@@ -725,3 +737,67 @@ st.components.v1.html(auth_js, height=0)
 
 if __name__ == "__main__":
     main()
+=======
+st.set_page_config(page_title="Artisan AI — Dynamic MVP", layout="centered")
+st.title("Artisan AI — Dynamic Product Listing (MVP → dynamic)")
+
+tabs = st.tabs(["Product Listing", "Social (MVP)", "Translation (MVP)"])
+
+with tabs[0]:
+    st.header("Product Listing — Upload image + short description")
+    col1, col2 = st.columns([2,1])
+    with col1:
+        description = st.text_area("Short description (what is the product, materials, any context):", height=140)
+        image_file = st.file_uploader("Upload product image (required for dynamic analysis)", type=["png","jpg","jpeg"])
+        model_choice = st.selectbox("LLM model (OpenAI)", ["gpt-3.5-turbo", "gpt-4o-mini", "gpt-4o"], index=0)
+        if st.button("Generate Dynamic Listing"):
+            if not description:
+                st.error("Please add a short description.")
+            elif not image_file:
+                st.error("Please upload an image for dynamic analysis.")
+            else:
+                with st.spinner("Analyzing image and generating listing..."):
+                    image_bytes = image_file.read()
+                    result = generate_listing(description, image_bytes, model=model_choice)
+                    # display
+                    st.subheader(result.get("title",""))
+                    st.markdown("**Bullets**")
+                    for b in result.get("bullets", []):
+                        st.write("- " + b)
+                    st.markdown("**Price from model**")
+                    st.write(result.get("price"))
+                    st.markdown("**Price (heuristic suggestion)**")
+                    st.write(result.get("suggested_price"))
+                    st.markdown("**Origin hint**")
+                    st.write(result.get("origin_hint") or "No specific origin detected")
+                    st.markdown("**Vision caption (what image model saw)**")
+                    st.write(result.get("vision", {}).get("caption",""))
+                    st.markdown("**Vision keywords**")
+                    st.write(", ".join(result.get("vision", {}).get("keywords", [])))
+                    st.markdown("**Dominant color**")
+                    st.write(result.get("vision", {}).get("dominant_color",""))
+                    st.markdown("**Artisan recommendations (how to increase value)**")
+                    for r in result.get("recommendations", []):
+                        st.write("- " + r)
+                    st.markdown("**Image fix suggestions (what to improve in image/product)**")
+                    for f in result.get("image_fix_suggestions", []):
+                        st.write("- " + f)
+                    if st.checkbox("Show raw model output (for debugging)"):
+                        st.code(result.get("_raw_model_output",""), language="json")
+                        st.code(result.get("_raw_recommendations_output",""))
+
+    with col2:
+        st.info("Tips:\n- Provide a concise description mentioning material if possible.\n- High-quality, well-lit photos produce better captions and recommendations.")
+        if st.button("Example test data"):
+            st.session_state['demo_description'] = "Handmade blue pottery vase, floral motifs, glossy finish."
+            st.experimental_rerun()
+
+with tabs[1]:
+    st.header("Social Media Generator (MVP)")
+    st.write("Use your existing social flow (this tab is placeholder)")
+
+with tabs[2]:
+    st.header("Multilingual Translation (MVP)")
+    st.write("Use your existing translate flow (this tab is placeholder)")
+
+>>>>>>> 3487404 (Updated project with latest fixes and API changes)
