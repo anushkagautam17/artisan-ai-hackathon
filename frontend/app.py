@@ -151,6 +151,35 @@ st.markdown("""
         color: white;
         border-color: #2575fc;
     }
+    
+    /* Home page specific styles */
+    .home-header {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        color: white;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .mission-statement {
+        background-color: #f0f2f6;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 2rem 0;
+        font-style: italic;
+        text-align: center;
+        border-left: 4px solid #6a11cb;
+    }
+    
+    .feature-card {
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        height: 100%;
+        text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -188,7 +217,7 @@ def check_backend_connection():
 def call_backend_api(description, image_file=None, target_lang="en", endpoint="generate"):
     """Call the backend API for different functionalities"""
     try:
-        backend_url = f"http://localhost:8000/{endpoint}"
+        backend_url = f"http://localhost:8000/api/{endpoint}"
         
         files = {}
         data = {"description": description, "target_lang": target_lang}
@@ -263,38 +292,86 @@ def generate_social_media_content(product_data, platform="instagram"):
 
 # Function to translate content via backend
 def translate_content_via_api(text, target_lang):
-    """Call backend for translation"""
+    """Call backend for translation with proper error handling"""
     if target_lang == "en":
         return text
     
     try:
-        # This endpoint should be implemented in your backend
+        # Try to call the real backend API
         response = requests.post(
-            "http://localhost:8000/translate",
+            "http://localhost:8000/api/translate",
             json={"text": text, "target_lang": target_lang},
             timeout=10
         )
+        
         if response.status_code == 200:
-            return response.json().get("translated_text", text)
-    except:
-        pass
+            result = response.json()
+            return result.get("translated_text", result.get("translation", text))
+        else:
+            st.warning(f"Translation API returned status {response.status_code}. Using fallback translations.")
+            
+    except requests.exceptions.ConnectionError:
+        st.warning("Translation service not available. Using fallback translations.")
+    except Exception as e:
+        st.warning(f"Translation error: {str(e)}. Using fallback translations.")
     
-    # Fallback mock translations
+    # Fallback mock translations - expanded for better coverage
     mock_translations = {
         "hi": {
             "Handcrafted Blue Pottery Vase": "हस्तनिर्मित नीला मिट्टी का फूलदान",
             "Beautiful handmade blue pottery vase": "सुंदर हस्तनिर्मित नीला मिट्टी का फूलदान",
             "Perfect for home decor or as a gift": "घर की सजावट या उपहार के लिए आदर्श",
-            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500"
+            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500",
+            "Handcrafted by skilled artisans": "कुशल कारीगरों द्वारा हस्तनिर्मित",
+            "Traditional techniques": "पारंपरिक तकनीकें",
+            "Eco-friendly glaze": "पर्यावरण के अनुकूल ग्लेज़",
+            "Unique floral patterns": "अनोखे फूलों की बनावट",
+            "Rajasthan, India": "राजस्थान, भारत",
+            "Handcrafted by skilled artisans using traditional techniques": "पारंपरिक तकनीकों का उपयोग करके कुशल कारीगरों द्वारा हस्तनिर्मित",
+            "Made from high-quality clay with eco-friendly glaze": "उच्च गुणवत्ता वाली मिट्टी से बना पर्यावरण के अनुकूल ग्लेज़ के साथ",
+            "Unique floral patterns inspired by traditional Indian art": "पारंपरिक भारतीय कला से प्रेरित अनोखे फूलों के पैटर्न",
+            "Perfect for home decoration or as a thoughtful gift": "घर की सजावट या एक विचारशील उपहार के लिए आदर्श"
         },
         "bn": {
             "Handcrafted Blue Pottery Vase": "হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানি",
             "Beautiful handmade blue pottery vase": "সুন্দর হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানি", 
             "Perfect for home decor or as a gift": "বাড়ির সাজসজ্জা বা উপহারের জন্য উপযুক্ত",
-            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500"
+            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500",
+            "Handcrafted by skilled artisans": "দক্ষ কারিগর দ্বারা হস্তনির্মিত",
+            "Traditional techniques": "প্রথাগত কৌশল",
+            "Eco-friendly glaze": "পরিবেশ বান্ধব গ্লেজ",
+            "Unique floral patterns": "অনন্য ফুলের নকশা",
+            "Rajasthan, India": "রাজস্থান, ভারত",
+            "Handcrafted by skilled artisans using traditional techniques": "প্রথাগত কৌশল ব্যবহার করে দক্ষ কারিগর দ্বারা হস্তনির্মিত",
+            "Made from high-quality clay with eco-friendly glaze": "উচ্চ মানের মাটি দিয়ে তৈরি পরিবেশ বান্ধব গ্লেজ সহ",
+            "Unique floral patterns inspired by traditional Indian art": "প্রথাগত ভারতীয় শিল্প দ্বারা অনুপ্রাণিত অনন্য ফুলের নকশা",
+            "Perfect for home decoration or as a thoughtful gift": "বাড়ির সাজসজ্জা বা একটি চিন্তাশীল উপহারের জন্য উপযুক্ত"
+        },
+        "ta": {
+            "Handcrafted Blue Pottery Vase": "கைவண்ண நீல மட்பாண்ட குவளை",
+            "Beautiful handmade blue pottery vase": "அழகான கைவண்ண நீல மட்பாண்ட குவளை",
+            "Perfect for home decor or as a gift": "வீட்டு அலங்காரம் அல்லது பரிசளிப்பதற்கு சிறந்தது",
+            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500",
+            "Handcrafted by skilled artisans": "திறமையான கைவினைஞர்களால் கைவினைப் படைப்பு",
+            "Traditional techniques": "பாரம்பரிய நுட்பங்கள்",
+            "Eco-friendly glaze": "சூழல் நன்மை கருதிய மெருகு",
+            "Unique floral patterns": "தனித்துவமான மலர் வடிவங்கள்",
+            "Rajasthan, India": "ராஜஸ்தான், இந்தியா"
+        },
+        "te": {
+            "Handcrafted Blue Pottery Vase": "హస్తనిర్మిత నీలి మట్టి పాత్ర",
+            "Beautiful handmade blue pottery vase": "అందమైన హస్తనిర్మిత నీలి మట్టి పాత్ర",
+            "Perfect for home decor or as a gift": "ఇంటి అలంకరణకు లేదా బహుమతిగా ఖచ్చితంగా",
+            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500",
+            "Handcrafted by skilled artisans": "నైపుణ్యం గల శిల్పులచే చేతితో తయారు చేయబడింది",
+            "Traditional techniques": "సాంప్రదాయిక పద్ధతులు",
+            "Eco-friendly glaze": "పర్యావరణ అనుకూలమైన గ్లేజ్",
+            "Unique floral patterns": "అనన్యమైన పుష్ప నమూనాలు",
+            "Rajasthan, India": "రాజస్థాన్, భారతదేశం"
         }
     }
     
+    # Return translation if available, otherwise return original text
     return mock_translations.get(target_lang, {}).get(text, text)
 
 # Mock function for fallback
@@ -326,6 +403,76 @@ def mock_generate_listing(description, image_bytes=None):
             "Capture the intricate details up close"
         ]
     }
+
+# Home page content
+def home_page_content():
+    """Content for the home page"""
+    st.markdown("""
+    <div class="home-header">
+        <h1>MadebyNaari 🎨</h1>
+        <h3>Empowering Indian artisans with AI-powered tools to showcase their crafts to the world</h3>
+        <p>Transform traditional craftsmanship into digital success stories with our simple, powerful platform.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Mission statement
+    st.markdown("""
+    <div class="mission-statement">
+        <p>"Our mission is to preserve traditional crafts while empowering women artisans with modern technology. 
+        We believe every handmade product tells a story, and every woman artisan deserves the opportunity 
+        to share hers with the world."</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Generate Content button that redirects to the main app
+    if st.button("**Generate Content Now**", type="primary", use_container_width=True):
+        # Set the page to main content in session state
+        st.session_state.page = "main"
+        st.rerun()
+    
+    # Features section
+    st.markdown("---")
+    st.header("How MadebyNaari Helps Artisans")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div class="feature-card">
+            <h3>🎨 AI Generates Content</h3>
+            <p>Our advanced AI creates compelling product titles, detailed descriptions, and marketing copy that highlights the unique aspects of your artisan product in seconds.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class="feature-card">
+            <h3>🌍 Get Translations</h3>
+            <p>Receive your content translated into multiple Indian languages – Hindi, Bengali, Tamil, Telugu, and more – to reach customers across different regions.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div class="feature-card">
+            <h3>🛒 Sell Anywhere</h3>
+            <p>Use the generated content on e-commerce platforms, social media, or your own website. Optimized for customer engagement and search visibility.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Backend status at the bottom
+    connected, status = check_backend_connection()
+    if connected:
+        st.markdown("---")
+        st.markdown('<div class="status-connected">✅ AI Backend Connected - Ready to generate content!</div>', unsafe_allow_html=True)
+    else:
+        st.markdown("---")
+        st.markdown(f"""
+        <div class="status-disconnected">
+            ⚠️ Backend not connected. Demo mode available. 
+            <br>Make sure backend is running: <code>cd backend && uvicorn main:app --reload</code>
+        </div>
+        """, unsafe_allow_html=True)
 
 # About section function
 def about_section():
@@ -367,13 +514,14 @@ def about_section():
     to share hers with the world."*
     """)
 
-def home_page():
-    """Main home page content"""
+# Main app content
+def main_app_content():
+    """Main app content with tabs"""
     # Header section
     st.markdown("""
     <div class="header">
-        <h1>MadebyNaari 🎨</h1>
-        <p>Empowering local artisans with AI-powered tools to market their craft</p>
+        <h1>MadebyNaari Content Generator 🎨</h1>
+        <p>Create compelling product listings, social media content, and multilingual translations</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -594,16 +742,30 @@ def home_page():
                 translated_title = content.get("title", "")
                 translated_desc = content.get("description", "")
                 translated_price = content.get("price", "")
+                translated_bullets = content.get("bullets", [])
             else:
                 # Show translated content
                 with st.spinner(f"Translating to {current_lang}..."):
                     translated_title = translate_content_via_api(content.get("title", ""), current_lang)
                     translated_desc = translate_content_via_api(content.get("description", ""), current_lang)
                     translated_price = translate_content_via_api(content.get("price", ""), current_lang)
+                    translated_bullets = [translate_content_via_api(bullet, current_lang) for bullet in content.get("bullets", [])]
             
             st.markdown(f"**{translated_title}**")
             st.write(translated_desc)
+            
+            # Display translated bullets if available
+            if translated_bullets:
+                st.markdown("**🌟 Key Features:**")
+                for bullet in translated_bullets:
+                    st.write(f"• {bullet}")
+            
             st.info(f"**Price:** {translated_price}")
+            
+            # Display origin hint if available
+            if content.get('origin_hint'):
+                translated_origin = translate_content_via_api(content.get('origin_hint'), current_lang) if current_lang != "en" else content.get('origin_hint')
+                st.info(f"**📍 Origin:** {translated_origin}")
             
             # Translation status
             if current_lang != "en":
@@ -618,7 +780,7 @@ def main():
     st.sidebar.markdown("---")
     
     # Navigation
-    page = st.sidebar.radio("Navigate to:", ["Home", "About", "Generator"])
+    page = st.sidebar.radio("Navigate to:", ["Home", "Content Generator", "About"])
     
     # Connection status in sidebar
     st.sidebar.markdown("---")
@@ -637,11 +799,11 @@ def main():
     
     # Page routing
     if page == "Home":
-        home_page()
+        home_page_content()
+    elif page == "Content Generator":
+        main_app_content()
     elif page == "About":
         about_section()
-    elif page == "Generator":
-        st.switch_page("pages/generator.py")
 
 if __name__ == "__main__":
     main()
