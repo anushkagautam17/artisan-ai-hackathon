@@ -8,6 +8,15 @@ import time
 import requests
 import json
 
+# Detect if we're running on Streamlit cloud
+IS_STREAMLIT_CLOUD = os.getenv('STREAMLIT_SERVER_IS_RUNNING_ON_STREAMLIT_CLOUD', False)
+
+# Set backend URL based on environment
+if IS_STREAMLIT_CLOUD:
+    BACKEND_URL = "https://your-backend-url.herokuapp.com"  # You'll need to deploy backend separately
+else:
+    BACKEND_URL = "http://localhost:8000"
+    
 # Set page configuration
 st.set_page_config(
     page_title="MadebyNaari - AI Assistant for Artisans",
@@ -206,7 +215,7 @@ def init_session_state():
 def check_backend_connection():
     """Check if backend is available"""
     try:
-        response = requests.get("http://localhost:8000/health", timeout=5)
+        response = requests.get(f"{BACKEND_URL}/health", timeout=5)
         if response.status_code == 200:
             return True, response.json()
         return False, {"error": f"Backend returned status {response.status_code}"}
@@ -217,7 +226,7 @@ def check_backend_connection():
 def call_backend_api(description, image_file=None, target_lang="en", endpoint="generate"):
     """Call the backend API for different functionalities"""
     try:
-        backend_url = f"http://localhost:8000/api/{endpoint}"
+        backend_url = f"{BACKEND_URL}/api/{endpoint}"
         
         files = {}
         data = {"description": description, "target_lang": target_lang}
@@ -293,13 +302,13 @@ def generate_social_media_content(product_data, platform="instagram"):
 # Function to translate content via backend
 def translate_content_via_api(text, target_lang):
     """Call backend for translation with proper error handling"""
-    if target_lang == "en":
+    if target_lang == "en" or not text:
         return text
     
     try:
         # Try to call the real backend API
         response = requests.post(
-            "http://localhost:8000/api/translate",
+            f"{BACKEND_URL}/api/translate",
             json={"text": text, "target_lang": target_lang},
             timeout=10
         )
@@ -308,71 +317,169 @@ def translate_content_via_api(text, target_lang):
             result = response.json()
             return result.get("translated_text", result.get("translation", text))
         else:
-            st.warning(f"Translation API returned status {response.status_code}. Using fallback translations.")
+            # Fall back to mock translations if API returns error
+            return get_mock_translation(text, target_lang)
             
     except requests.exceptions.ConnectionError:
         st.warning("Translation service not available. Using fallback translations.")
+        return get_mock_translation(text, target_lang)
     except Exception as e:
         st.warning(f"Translation error: {str(e)}. Using fallback translations.")
+        return get_mock_translation(text, target_lang)
+
+def get_mock_translation(text, target_lang):
+    """Comprehensive mock translations for demo purposes"""
+    if target_lang == "en":
+        return text
     
-    # Fallback mock translations - expanded for better coverage
+    # Expanded mock translations database
     mock_translations = {
         "hi": {
-            "Handcrafted Blue Pottery Vase": "हस्तनिर्मित नीला मिट्टी का फूलदान",
-            "Beautiful handmade blue pottery vase": "सुंदर हस्तनिर्मित नीला मिट्टी का फूलदान",
-            "Perfect for home decor or as a gift": "घर की सजावट या उपहार के लिए आदर्श",
-            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500",
-            "Handcrafted by skilled artisans": "कुशल कारीगरों द्वारा हस्तनिर्मित",
-            "Traditional techniques": "पारंपरिक तकनीकें",
-            "Eco-friendly glaze": "पर्यावरण के अनुकूल ग्लेज़",
-            "Unique floral patterns": "अनोखे फूलों की बनावट",
-            "Rajasthan, India": "राजस्थान, भारत",
-            "Handcrafted by skilled artisans using traditional techniques": "पारंपरिक तकनीकों का उपयोग करके कुशल कारीगरों द्वारा हस्तनिर्मित",
-            "Made from high-quality clay with eco-friendly glaze": "उच्च गुणवत्ता वाली मिट्टी से बना पर्यावरण के अनुकूल ग्लेज़ के साथ",
-            "Unique floral patterns inspired by traditional Indian art": "पारंपरिक भारतीय कला से प्रेरित अनोखे फूलों के पैटर्न",
-            "Perfect for home decoration or as a thoughtful gift": "घर की सजावट या एक विचारशील उपहार के लिए आदर्श"
+            # Product types
+            "Handcrafted": "हस्तनिर्मित",
+            "Pottery": "मिट्टी के बर्तन",
+            "Vase": "फूलदान",
+            "Textile": "वस्त्र",
+            "Jewelry": "गहने",
+            "Artisan": "कारीगर",
+            "Handmade": "हस्तनिर्मित",
+            
+            # Materials
+            "Clay": "मिट्टी",
+            "Silk": "रेशम",
+            "Cotton": "कपास",
+            "Wood": "लकड़ी",
+            "Metal": "धातु",
+            "Ceramic": "सिरेमिक",
+            
+            # Descriptions
+            "Beautiful": "सुंदर",
+            "Traditional": "पारंपरिक",
+            "Floral motifs": "फूलों की बनावट",
+            "Glossy finish": "चमकदार खत्म",
+            "Eco-friendly": "पर्यावरण के अनुकूल",
+            "Unique": "अनोखा",
+            "Skilled artisans": "कुशल कारीगर",
+            
+            # Common phrases
+            "Perfect for home decor": "घर की सजावट के लिए आदर्श",
+            "as a gift": "उपहार के रूप में",
+            "Made from high-quality": "उच्च गुणवत्ता से बना",
+            "inspired by traditional Indian art": "पारंपरिक भारतीय कला से प्रेरित",
+            
+            # Regions
+            "Rajasthan": "राजस्थान",
+            "India": "भारत",
+            
+            # Price format
+            "₹": "₹",
         },
         "bn": {
-            "Handcrafted Blue Pottery Vase": "হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানি",
-            "Beautiful handmade blue pottery vase": "সুন্দর হস্তনির্মিত নীল মৃৎশিল্পের ফুলদানি", 
-            "Perfect for home decor or as a gift": "বাড়ির সাজসজ্জা বা উপহারের জন্য উপযুক্ত",
-            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500",
-            "Handcrafted by skilled artisans": "দক্ষ কারিগর দ্বারা হস্তনির্মিত",
-            "Traditional techniques": "প্রথাগত কৌশল",
-            "Eco-friendly glaze": "পরিবেশ বান্ধব গ্লেজ",
-            "Unique floral patterns": "অনন্য ফুলের নকশা",
-            "Rajasthan, India": "রাজস্থান, ভারত",
-            "Handcrafted by skilled artisans using traditional techniques": "প্রথাগত কৌশল ব্যবহার করে দক্ষ কারিগর দ্বারা হস্তনির্মিত",
-            "Made from high-quality clay with eco-friendly glaze": "উচ্চ মানের মাটি দিয়ে তৈরি পরিবেশ বান্ধব গ্লেজ সহ",
-            "Unique floral patterns inspired by traditional Indian art": "প্রথাগত ভারতীয় শিল্প দ্বারা অনুপ্রাণিত অনন্য ফুলের নকশা",
-            "Perfect for home decoration or as a thoughtful gift": "বাড়ির সাজসজ্জা বা একটি চিন্তাশীল উপহারের জন্য উপযুক্ত"
+            "Handcrafted": "হস্তনির্মিত",
+            "Pottery": "মৃৎশিল্প",
+            "Vase": "ফুলদানি",
+            "Textile": "টেক্সটাইল",
+            "Jewelry": "গয়না",
+            "Artisan": "শিল্পী",
+            "Handmade": "হস্তনির্মিত",
+            "Clay": "মাটি",
+            "Silk": "সিল্ক",
+            "Cotton": "কার্পাস",
+            "Wood": "কাঠ",
+            "Metal": "ধাতু",
+            "Ceramic": "সিরামিক",
+            "Beautiful": "সুন্দর",
+            "Traditional": "প্রথাগত",
+            "Floral motifs": "ফুলের নকশা",
+            "Glossy finish": "চকচকে ফিনিস",
+            "Eco-friendly": "পরিবেশ বান্ধব",
+            "Unique": "অনন্য",
+            "Skilled artisans": "দক্ষ কারিগর",
+            "Perfect for home decoration": "বাড়ির সাজসজ্জার জন্য উপযুক্ত",
+            "as a gift": "উপহার হিসাবে",
+            "Made from high-quality": "উচ্চ মানের থেকে তৈরি",
+            "inspired by traditional Indian art": "প্রথাগত ভারতীয় শিল্প দ্বারা অনুপ্রাণিত",
+            "Rajasthan": "রাজস্থান",
+            "India": "ভারত",
+            "₹": "₹",
         },
         "ta": {
-            "Handcrafted Blue Pottery Vase": "கைவண்ண நீல மட்பாண்ட குவளை",
-            "Beautiful handmade blue pottery vase": "அழகான கைவண்ண நீல மட்பாண்ட குவளை",
-            "Perfect for home decor or as a gift": "வீட்டு அலங்காரம் அல்லது பரிசளிப்பதற்கு சிறந்தது",
-            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500",
-            "Handcrafted by skilled artisans": "திறமையான கைவினைஞர்களால் கைவினைப் படைப்பு",
-            "Traditional techniques": "பாரம்பரிய நுட்பங்கள்",
-            "Eco-friendly glaze": "சூழல் நன்மை கருதிய மெருகு",
-            "Unique floral patterns": "தனித்துவமான மலர் வடிவங்கள்",
-            "Rajasthan, India": "ராஜஸ்தான், இந்தியா"
+            "Handcrafted": "கைவண்ண",
+            "Pottery": "மட்பாண்ட",
+            "Vase": "குவளை",
+            "Textile": "துணி",
+            "Jewelry": "நகை",
+            "Artisan": "கைவினைஞர்",
+            "Handmade": "கைவண்ண",
+            "Clay": "களிமண்",
+            "Silk": "பட்டு",
+            "Cotton": "பருத்தி",
+            "Wood": "மரம்",
+            "Metal": "உலோகம்",
+            "Ceramic": "மட்பாண்ட",
+            "Beautiful": "அழகான",
+            "Traditional": "பாரம்பரிய",
+            "Floral motifs": "மலர் வடிவங்கள்",
+            "Glossy finish": "மினுமினுப்பு முடிப்பு",
+            "Eco-friendly": "சூழல் நன்மை",
+            "Unique": "தனித்துவமான",
+            "Skilled artisans": "திறமையான கைவினைஞர்கள்",
+            "Perfect for home decoration": "வீட்டு அலங்காரத்திற்கு சிறந்தது",
+            "as a gift": "பரிசாக",
+            "Made from high-quality": "உயர்தரத்தில் இருந்து தயாரிக்கப்பட்ட",
+            "inspired by traditional Indian art": "பாரம்பரிய இந்திய கலையால் ஈர்க்கப்பட்ட",
+            "Rajasthan": "ராஜஸ்தான்",
+            "India": "இந்தியா",
+            "₹": "₹",
         },
         "te": {
-            "Handcrafted Blue Pottery Vase": "హస్తనిర్మిత నీలి మట్టి పాత్ర",
-            "Beautiful handmade blue pottery vase": "అందమైన హస్తనిర్మిత నీలి మట్టి పాత్ర",
-            "Perfect for home decor or as a gift": "ఇంటి అలంకరణకు లేదా బహుమతిగా ఖచ్చితంగా",
-            "₹1,200 - ₹1,500": "₹1,200 - ₹1,500",
-            "Handcrafted by skilled artisans": "నైపుణ్యం గల శిల్పులచే చేతితో తయారు చేయబడింది",
-            "Traditional techniques": "సాంప్రదాయిక పద్ధతులు",
-            "Eco-friendly glaze": "పర్యావరణ అనుకూలమైన గ్లేజ్",
-            "Unique floral patterns": "అనన్యమైన పుష్ప నమూనాలు",
-            "Rajasthan, India": "రాజస్థాన్, భారతదేశం"
+            "Handcrafted": "హస్తనిర్మిత",
+            "Pottery": "మృత్పాత్ర",
+            "Vase": "వేస్",
+            "Textile": "టెక్స్టైల్",
+            "Jewelry": "నగలు",
+            "Artisan": "కళాకారుడు",
+            "Handmade": "హస్తనిర్మిత",
+            "Clay": "మట్టి",
+            "Silk": "పట్టు",
+            "Cotton": "పత్తి",
+            "Wood": "చెక్క",
+            "Metal": "లోహం",
+            "Ceramic": "సిరామిక్",
+            "Beautiful": "అందమైన",
+            "Traditional": "సాంప్రదాయ",
+            "Floral motifs": "పుష్ప ఆకృతులు",
+            "Glossy finish": "మెరిసే పూత",
+            "Eco-friendly": "పर్యావరణ అనుకూల",
+            "Unique": "అనన్యమైన",
+            "Skilled artisans": "నైపుణ్యం గల శిల్పులు",
+            "Perfect for home decoration": "ఇంటి అలంకరణకు సరైనది",
+            "as a gift": "బహుమతిగా",
+            "Made from high-quality": "ఉన్నత గుణమైనది నుండి తయారు చేయబడినది",
+            "inspired by traditional Indian art": "సాంప్రదాయ భారతీయ కళ ద్వారा ప్రేరణ పొందింది",
+            "Rajasthan": "రాజస్థాన్",
+            "India": "భారతదేశం",
+            "₹": "₹",
         }
     }
     
-    # Return translation if available, otherwise return original text
-    return mock_translations.get(target_lang, {}).get(text, text)
+    # Get translations for the target language
+    lang_dict = mock_translations.get(target_lang, {})
+    
+    # Simple word-by-word translation as fallback
+    words = text.split()
+    translated_words = []
+    
+    for word in words:
+        # Keep numbers and special characters as is
+        if word.isdigit() or word in [",", ".", "!", "?", "-", "₹"]:
+            translated_words.append(word)
+        else:
+            # Try to translate the word
+            translated_word = lang_dict.get(word, word)
+            translated_words.append(translated_word)
+    
+    return " ".join(translated_words)
 
 # Mock function for fallback
 def mock_generate_listing(description, image_bytes=None):
@@ -768,8 +875,18 @@ def main_app_content():
                 st.info(f"**📍 Origin:** {translated_origin}")
             
             # Translation status
+            backend_connected = st.session_state.backend_status == "connected"
             if current_lang != "en":
-                st.warning("⚠️ Using demo translations. Connect backend for real AI translations!")
+                if backend_connected:
+                    st.success("✅ Using AI-powered translations")
+                else:
+                    st.warning("⚠️ Using demo translations. Connect backend for enhanced AI translations!")
+        
+        # Test translation button
+        if st.button("Test Translation", key="test_translation"):
+            test_text = "Handcrafted Blue Pottery Vase with traditional floral motifs"
+            translated_test = translate_content_via_api(test_text, current_lang)
+            st.info(f"Test translation: '{test_text}' → '{translated_test}'")
 
 def main():
     # Initialize session state

@@ -1,15 +1,16 @@
-#backend/main.py
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+# backend/main.py
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from PIL import Image
 import io
 import os
 import sys
 import json
+import random
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
-from fastapi import Request
-import json
+
 # Load environment variables
 load_dotenv()
 
@@ -29,14 +30,23 @@ except ImportError as e:
 
 app = FastAPI(title="MadebyNaari API", version="1.0.0")
 
-# Enable CORS
+# Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501", "http://127.0.0.1:8501"],
+    allow_origins=["http://localhost:8501", "http://127.0.0.1:8501", "https://*.streamlit.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Pydantic models for request validation
+class TranslationRequest(BaseModel):
+    text: str
+    target_lang: str
+
+class GenerateRequest(BaseModel):
+    description: str
+    target_lang: str = "en"
 
 # Helper function to resize image
 def resize_image(image_data: bytes, max_size: tuple = (512, 512)) -> bytes:
@@ -189,9 +199,7 @@ def generate_demo_listing(description: str, image_data: bytes = None) -> Dict:
             "Capture the intricate details up close",
             "Use a clean, neutral background",
             "Ensure the product is in focus"
-        ],
-        "_raw_model_output": json.dumps({"product_type": product_type, "description": description}),
-        "_raw_recommendations_output": "Demo recommendations based on product type"
+        ]
     }
 
 # Health endpoint
@@ -204,33 +212,33 @@ async def health_check():
     return {"status": "healthy", "ai_enabled": AI_ENABLED, "service": "MadebyNaari"}
 
 # Main generation endpoint - matches frontend expectations exactly
-@app.post("/generate")
+@app.post("/api/generate")
 async def generate_listing_endpoint(
-    image: UploadFile = File(...),
     description: str = Form(...),
     target_lang: str = Form("en"),
+    image: Optional[UploadFile] = File(None)
 ):
+    """Main endpoint for generating product listings - matches frontend API calls"""
     try:
         print(f"Received request - description: '{description}', target_lang: '{target_lang}'")
         
-        # Read and resize the image
-        image_data = await image.read()
-        if not image_data:
-            raise HTTPException(status_code=400, detail="No image data received")
-
-        resized_image = resize_image(image_data)
-        print(f"Resized image size: {len(resized_image)} bytes")
+        image_data = None
+        if image:
+            image_data = await image.read()
+            if image_data:
+                image_data = resize_image(image_data)
+                print(f"Resized image size: {len(image_data)} bytes")
 
         # Use AI if available, otherwise use demo data
         if AI_ENABLED:
             print("Using AI for generation")
-            result = generate_listing(description=description, image_bytes=resized_image)
+            result = generate_listing(description=description, image_bytes=image_data)
         else:
             print("Using demo data - AI not available")
-            result = generate_demo_listing(description, resized_image)
+            result = generate_demo_listing(description, image_data)
 
         # Return the exact format expected by frontend
-        enhanced_result = {
+        return {
             "title": result.get("title", "Product Title"),
             "description": result.get("description", description),
             "bullets": result.get("bullets", []),
@@ -243,8 +251,7 @@ async def generate_listing_endpoint(
             "vision": result.get("vision", {
                 "caption": result.get("title", "") + " - Handcrafted with care",
                 "keywords": ["artisan", "handmade", "traditional"],
-                "dominant_color": "Natural",
-                "size_category": "medium"
+                "dominant_color": "Natural"
             }),
             "recommendations": result.get("recommendations", [
                 "Use natural lighting for photography",
@@ -254,78 +261,31 @@ async def generate_listing_endpoint(
             "image_fix_suggestions": result.get("image_fix_suggestions", [
                 "Crop to focus on product",
                 "Adjust brightness for better clarity"
-            ]),
-            "_raw_model_output": result.get("_raw_model_output", ""),
-            "_raw_recommendations_output": result.get("_raw_recommendations_output", "")
+            ])
         }
-
-        print("Success! Returning result")
-        return enhanced_result
 
     except Exception as e:
         print(f"Error occurred: {str(e)}")
         import traceback
         traceback.print_exc()
         # Fallback to demo data on error
-        try:
-            image_data = await image.read() if image else None
-            result = generate_demo_listing(description, image_data)
-            return result
-        except:
-            raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+        result = generate_demo_listing(description, None)
+        return result
 
-# API endpoint for frontend integration
-@app.post("/api/generate-listing")
-async def api_generate_listing(
-    image: UploadFile = File(None),
-    description: str = Form(""),
-    target_lang: str = Form("en")
-):
-    """API endpoint specifically for frontend integration"""
+# Translation endpoint - matches frontend API calls
+@app.post("/api/translate")
+async def translate_text_endpoint(request: TranslationRequest):
+    """Translation endpoint with improved vocabulary - matches frontend API calls"""
     try:
-        print(f"API Request - description: '{description}', target_lang: '{target_lang}'")
+        text = request.text
+        target_lang = request.target_lang
         
-        image_data = None
-        if image:
-            image_data = await image.read()
-            if image_data:
-                image_data = resize_image(image_data)
-                print(f"API: Processed image size: {len(image_data)} bytes")
-
-        # Use AI if available, otherwise use demo data
-        if AI_ENABLED:
-            result = generate_listing(description=description, image_bytes=image_data)
-        else:
-            result = generate_demo_listing(description, image_data)
-
-        # Return the exact format frontend expects
-        return {
-            "title": result.get("title", "Product Title"),
-            "description": result.get("description", description),
-            "bullets": result.get("bullets", []),
-            "price": result.get("price", "₹0"),
-            "suggested_price": result.get("suggested_price", "₹0"),
-            "origin_hint": result.get("origin_hint", "India"),
-            "vision": result.get("vision", {}),
-            "recommendations": result.get("recommendations", []),
-            "image_fix_suggestions": result.get("image_fix_suggestions", [])
-        }
-
-    except Exception as e:
-        print(f"API Error: {str(e)}")
-        # Fallback to demo data
-        return generate_demo_listing(description, None)
-
-# Translation endpoint
-@app.post("/translate")
-async def translate_text(
-    text: str = Form(...),
-    target_lang: str = Form("hi")
-):
-    """Translation endpoint with improved vocabulary"""
-    try:
         if target_lang == "en":
-            return {"translated_text": text, "source_lang": "en", "target_lang": target_lang}
+            return {
+                "translated_text": text, 
+                "original_text": text,
+                "target_lang": target_lang
+            }
         
         # Enhanced translation dictionaries
         translations = {
@@ -350,7 +310,8 @@ async def translate_text(
                 "crafted by": "द्वारा निर्मित",
                 "skilled artisans": "कुशल कारीगर",
                 "unique": "अनोखा",
-                "cultural heritage": "सांस्कृतिक विरासत"
+                "cultural heritage": "सांस्कृतिक विरासत",
+                "₹": "₹"
             },
             "bn": {
                 "Handcrafted": "হস্তনির্মিত",
@@ -373,27 +334,114 @@ async def translate_text(
                 "crafted by": "দ্বারা তৈরি",
                 "skilled artisans": "দক্ষ কারিগর",
                 "unique": "অনন্য",
-                "cultural heritage": "সাংস্কৃতিক heritage"
+                "cultural heritage": "সাংস্কৃতিক heritage",
+                "₹": "₹"
+            },
+            "ta": {
+                "Handcrafted": "கைவண்ண",
+                "Traditional": "பாரம்பரிய",
+                "Beautiful": "அழகான",
+                "Pottery": "மட்பாண்ட",
+                "Textile": "துணி",
+                "Jewelry": "நகை",
+                "India": "இந்தியா",
+                "Rajasthan": "ராஜஸ்தான்",
+                "Varanasi": "வாரணாசி",
+                "Delhi": "டெல்லி",
+                "Perfect for home decoration": "வீட்டு அலங்காரத்திற்கு சிறந்தது",
+                "as a special gift": "ஒரு சிறப்பு பரிசாக",
+                "Made by skilled artisans": "திறமையான கைவினைஞர்களால் தயாரிக்கப்பட்டது",
+                "using traditional methods": "பாரம்பரிய முறைகளைப் பயன்படுத்தி",
+                "Natural and eco-friendly materials": "இயற்கை மற்றும் சூழல் அன்புள்ள பொருட்கள்",
+                "each piece is different": "ஒவ்வொரு துண்டும் வித்தியாசமானது",
+                "Supports local artisan communities": "உள்ளூர் கைவினைஞர் சமூகங்களை ஆதரிக்கிறது",
+                "crafted by": "மூலம் crafted",
+                "skilled artisans": "திறமையான கைவினைஞர்கள்",
+                "unique": "தனித்துவமான",
+                "cultural heritage": "கலாச்சார மரபு",
+                "₹": "₹"
+            },
+            "te": {
+                "Handcrafted": "హస్తనిర్మిత",
+                "Traditional": "సాంప్రదాయ",
+                "Beautiful": "అందమైన",
+                "Pottery": "మృత్పాత్ర",
+                "Textile": "టెక్స్టైల్",
+                "Jewelry": "నగలు",
+                "India": "భారతదేశం",
+                "Rajasthan": "రాజస్థాన్",
+                "Varanasi": "వారణాసి",
+                "Delhi": "델్హి",
+                "Perfect for home decoration": "ఇంటి అలంకరణకు సరైనది",
+                "as a special gift": "ఒక ప్రత్యేక బహుమతిగా",
+                "Made by skilled artisans": "నైపుణ్యం గల శిల్పులచే తయారు చేయబడింది",
+                "using traditional methods": "సాంప్రదాయ పద్ధతులను ఉపయోగించి",
+                "Natural and eco-friendly materials": "సహజ మరియు పర్యావరణ అనుకూల పదార్థాలు",
+                "each piece is different": "ప్రతి ముక్క భిన్నంగా ఉంటుంది",
+                "Supports local artisan communities": "స్థానిక శిల్పి సంఘాలకు మద్దతు ఇస్తుంది",
+                "crafted by": "ద్వారా crafted",
+                "skilled artisans": "నైపుణ్యం గల శిల్పులు",
+                "unique": "అనన్యమైన",
+                "cultural heritage": "సాంస్కృతిక మార్పు",
+                "₹": "₹"
             }
         }
         
         translated_text = text
-        for eng, trans in translations.get(target_lang, {}).items():
+        lang_dict = translations.get(target_lang, {})
+        
+        # Replace words that have translations
+        for eng, trans in lang_dict.items():
             translated_text = translated_text.replace(eng, trans)
             
         return {
             "translated_text": translated_text,
-            "source_lang": "en",
-            "target_lang": target_lang,
-            "note": "Translation provided by MadebyNaari"
+            "original_text": text,
+            "target_lang": target_lang
         }
         
     except Exception as e:
-        return {"translated_text": text, "error": str(e)}
-    
+        print(f"Translation error: {str(e)}")
+        return {
+            "translated_text": text,
+            "original_text": text,
+            "target_lang": target_lang,
+            "error": str(e)
+        }
+
+# Simple text generation endpoint (no image)
+@app.post("/api/generate-text")
+async def generate_text_endpoint(request: GenerateRequest):
+    """Generate product text without image upload"""
+    try:
+        description = request.description
+        target_lang = request.target_lang
+        
+        print(f"Text generation request - description: '{description}'")
+        
+        # Use AI if available, otherwise use demo data
+        if AI_ENABLED:
+            result = generate_listing(description=description, image_bytes=None)
+        else:
+            result = generate_demo_listing(description, None)
+        
+        return {
+            "title": result.get("title", "Product Title"),
+            "description": result.get("description", description),
+            "bullets": result.get("bullets", []),
+            "price": result.get("price", "₹0"),
+            "suggested_price": result.get("suggested_price", "₹0"),
+            "origin_hint": result.get("origin_hint", "India")
+        }
+        
+    except Exception as e:
+        print(f"Text generation error: {str(e)}")
+        result = generate_demo_listing(request.description, None)
+        return result
+
 # Language update endpoint for homepage
-@app.post("/update_language")
-async def update_language(request: Request):
+@app.post("/api/update-language")
+async def update_language_endpoint(request: Request):
     """Update the user's language preference"""
     try:
         data = await request.json()
@@ -401,17 +449,26 @@ async def update_language(request: Request):
         
         # Here you would typically save to database or session
         # For now, we'll just return success
-        return {"status": "success", "language": language}
+        return {"status": "success", "language": language, "message": f"Language updated to {language}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-    
-@app.get("/")
-async def root():
-    return {"message": "MadebyNaari API is running!", "status": "success"}
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "ai_enabled": AI_ENABLED}
+# Additional health check endpoint
+@app.get("/api/status")
+async def api_status():
+    """Detailed API status information"""
+    return {
+        "status": "healthy",
+        "ai_enabled": AI_ENABLED,
+        "service": "MadebyNaari API",
+        "version": "1.0.0",
+        "endpoints": {
+            "generate": "/api/generate",
+            "translate": "/api/translate",
+            "generate-text": "/api/generate-text",
+            "health": "/health"
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn
